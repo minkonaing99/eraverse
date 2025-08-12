@@ -1,0 +1,54 @@
+        #searchCustomerWrapper {
+            display: none;
+        }
+
+        #searchCustomerWrapper.is-visible {
+            display: inline-block;
+            animation: fadeIn .25s ease;
+        }
+
+        #searchBtn.is-hidden {
+            display: none;
+        }
+
+        .text-center {
+            text-align: center;
+        }
+
+        .era-subtotal td {
+            font-weight: 700;
+            padding: .8rem 0rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+            text-align: right;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: scaleX(0.95);
+            }
+
+            to {
+                opacity: 1;
+                transform: scaleX(1);
+            }
+        }
+
+        /* If your .era-muted disables pointer events, re-enable for editable cells */
+        .editable-cell.era-muted {
+            pointer-events: auto;
+        }
+
+        /* Typical ellipsis styling you likely have on the table cells */
+        .td-scrollable {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* While editing, let content breathe */
+        .editable-cell.editing {
+            overflow: visible;
+            white-space: normal;
+            text-overflow: clip;
+        }

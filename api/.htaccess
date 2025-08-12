@@ -1,0 +1,16 @@
+# /eraverse/api/.htaccess
+Options -Indexes -MultiViews
+RewriteEngine On
+
+# If someone browses to /eraverse/api or /eraverse/api/
+RewriteRule ^$ /eraverse/index.php [R=302,L]
+
+# ALLOW-LIST: only allow GETs that originate from your own pages
+# (index.php, product_catalog.php, sales_overview.php, summary.php) under /eraverse
+RewriteCond %{REQUEST_METHOD} =GET
+RewriteCond %{HTTP_REFERER} ^https?://[^/]+(:\d+)?/eraverse/(index|product_catalog|sales_overview|summary)\.php([?#].*)?$ [NC]
+RewriteRule ^ - [L]
+
+# Everything else that's a GET under /eraverse/api → redirect to your app index
+RewriteCond %{REQUEST_METHOD} =GET
+RewriteRule ^ /eraverse/index.php [R=302,L]
