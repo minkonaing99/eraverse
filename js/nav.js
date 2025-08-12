@@ -71,17 +71,23 @@
 document.getElementById("logoutBtn")?.addEventListener("click", async (e) => {
   e.preventDefault();
 
-  if (!confirm("Are you sure you want to log out?")) {
-    return; // Cancel logout
-  }
+  if (!confirm("Are you sure you want to log out?")) return;
 
   try {
-    const resp = await fetch("/api/logout.php", {
-      method: "POST", // POST, so it passes your .htaccess rule
+    const resp = await fetch("./api/logout.php", {
+      method: "POST",
+      credentials: "same-origin",
+      headers: { "X-Requested-With": "XMLHttpRequest" }, // optional, but nice
     });
 
-    window.location.href = "/index.php";
+    if (resp.ok) {
+      window.location.href = "./index.php";
+    } else {
+      console.error("Logout failed", await resp.text());
+      alert("Logout failed. Try again.");
+    }
   } catch (err) {
     console.error("Logout failed", err);
+    alert("Network error during logout.");
   }
 });

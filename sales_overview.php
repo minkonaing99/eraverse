@@ -38,7 +38,9 @@ $user = htmlspecialchars($_SESSION['user']['username'] ?? 'Guest', ENT_QUOTES);
                     <a href="product_catalog.php" aria-label="Product Catalog">Product Catalog</a>
                     <a href="summary.php" aria-label="Summary">Summary</a>
                 <?php endif; ?>
-                <a href="./api/logout.php" aria-label="LogOut" id="logoutBtn">Log Out</a>
+                <a href="#" aria-label="LogOut" id="logoutBtn">Log Out</a>
+
+
             </div>
 
             <button class="burger" id="burger" aria-label="Menu Toggle">

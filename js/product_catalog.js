@@ -143,7 +143,11 @@
     } else setDanger(refs.retail, false);
 
     const renewableInt = parseRenewInt(refs.renewable);
-    if (!Number.isInteger(renewableInt)) {
+    if (
+      renewableInt == null || // parseRenewInt returns null when invalid
+      !Number.isInteger(duration) || // guard if duration isn't valid yet
+      renewableInt >= duration // must be strictly less than duration
+    ) {
       errors.renew = true;
       setDanger(refs.renewable, true);
     } else {
@@ -183,6 +187,7 @@
       refs.duration?.addEventListener(evt, validator);
       refs.wholesale?.addEventListener(evt, validator);
       refs.retail?.addEventListener(evt, validator);
+      refs.renewable?.addEventListener(evt, validator); // <-- add this (input)
     });
     refs.renewable?.addEventListener("change", validator);
     validator(); // initial
