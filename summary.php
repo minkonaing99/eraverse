@@ -4,7 +4,7 @@ declare(strict_types=1);
 require __DIR__ . '/api/session_bootstrap.php';
 require __DIR__ . '/api/auth.php';
 
-auth_require_login(['admin']);
+auth_require_login(['admin', 'staff']);
 ?>
 
 <?php
@@ -19,9 +19,8 @@ $user = htmlspecialchars($_SESSION['user']['username'] ?? 'Guest', ENT_QUOTES);
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Eraverse • Summary</title>
-    <link rel="stylesheet" href="./style/style.css">
-    <link rel="stylesheet" href="./style/summary.css">
-
+    <link rel="stylesheet" href="./style/style.min.css">
+    <link rel="stylesheet" href="./style/summary.min.css">
 
 
 </head>
@@ -54,7 +53,7 @@ $user = htmlspecialchars($_SESSION['user']['username'] ?? 'Guest', ENT_QUOTES);
     <main class="page" role="main">
 
 
-        <section class="era-table-card mb" aria-labelledby="tbl-title">
+        <section class="era-table-card mb " aria-labelledby="tbl-title">
             <div class="menu-bar">
                 <h2 id="tbl-title" class="era-table-title">Summary</h2>
             </div>
@@ -83,7 +82,7 @@ $user = htmlspecialchars($_SESSION['user']['username'] ?? 'Guest', ENT_QUOTES);
             </div>
         </section>
 
-        <section class="era-table-card mb" aria-labelledby="tbl-title">
+        <section class="era-table-card mb destop-table" aria-labelledby="tbl-title">
             <div class="menu-bar">
                 <h2 id="tbl-title" class="era-table-title">Expire Soon</h2>
             </div>
@@ -103,11 +102,57 @@ $user = htmlspecialchars($_SESSION['user']['username'] ?? 'Guest', ENT_QUOTES);
                         </tr>
                     </thead>
                     <tbody id="expire_soon">
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section class="era-table-card mb destop-table" aria-labelledby="tbl-title">
+            <div class="menu-bar">
+                <h2 id="tbl-title" class="era-table-title">Need Renewable</h2>
+            </div>
+
+            <!-- Table -->
+            <div class="era-table-wrap">
+                <table class="era-table" role="table" aria-label="Subscriptions table">
+                    <thead>
+                        <tr>
+                            <th class="era-num">#</th>
+                            <th>Product</th>
+                            <th style="text-align: center;">Customer</th>
+                            <th class="era-email">Email</th>
+                            <th style="text-align: center;">Purchased</th>
+                            <th style="text-align: center;">Renewable Date</th>
+                            <th style="text-align: center;">End Date</th>
+                            <th style="text-align: right;">Date Left</th>
+                        </tr>
+                    </thead>
+                    <tbody id="need_renew">
 
                     </tbody>
                 </table>
             </div>
         </section>
+
+        <div class="subs-list mb">
+            <div class="menu-bar">
+                <h2 id="tbl-title" class="era-table-title">Expired item</h2>
+            </div>
+            <div id="expired-item">
+
+            </div>
+        </div>
+
+
+        <div class="subs-list mb">
+            <div class="menu-bar">
+                <h2 id="tbl-title" class="era-table-title">Renew Item</h2>
+            </div>
+            <div id="renewal-item">
+            </div>
+        </div>
+
+
 
 
         <section class="era-table-card mb" aria-labelledby="tbl-title">
@@ -129,31 +174,6 @@ $user = htmlspecialchars($_SESSION['user']['username'] ?? 'Guest', ENT_QUOTES);
             </div>
         </section>
 
-        <section class="era-table-card mb" aria-labelledby="tbl-title">
-            <div class="menu-bar">
-                <h2 id="tbl-title" class="era-table-title">Need Renewable</h2>
-            </div>
-
-            <!-- Table -->
-            <div class="era-table-wrap">
-                <table class="era-table" role="table" aria-label="Subscriptions table">
-                    <thead>
-                        <tr>
-                            <th class="era-num">#</th>
-                            <th>Product</th>
-                            <th style="text-align: center;">Customer</th>
-                            <th class="era-email">Email</th>
-                            <th style="text-align: center;">Purchased</th>
-                            <th style="text-align: center;">Renewable Date</th>
-                            <th style="text-align: right;">Date Left</th>
-                        </tr>
-                    </thead>
-                    <tbody id="need_renew">
-
-                    </tbody>
-                </table>
-            </div>
-        </section>
 
         <section class="era-table-card mb" aria-labelledby="tbl-title">
             <div class="menu-bar">
@@ -168,12 +188,15 @@ $user = htmlspecialchars($_SESSION['user']['username'] ?? 'Guest', ENT_QUOTES);
             </div>
         </section>
 
+
+
+
     </main>
 
     <script src="./js/nav.js"></script>
+    <script src="./js/summary_table.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     <script src="./js/deplay_chart.js"></script>
-    <script src="./js/summary_table.js"></script>
 
 </body>
 

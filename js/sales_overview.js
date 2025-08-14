@@ -72,47 +72,50 @@ document
   });
 
 /* -----------------------------
-   Sales table: cache-first + 100-per-view + daily subtotals + inline edit
------------------------------ */
-/* -----------------------------
-   Sales table: cache-first + 100-per-view + daily subtotals + inline edit + client search
------------------------------ */
-/* -----------------------------
-   Sales table: cache-first + 100-per-view + daily subtotals
-   + inline edit (dblclick) + client-side search (debounced) with precomputed key
+   Sales table/cards: cache-first + 100-per-view + daily subtotals + inline edit + search
 ----------------------------- */
 (() => {
   const API_LIST_URL = "api/sales_table.php";
   const API_DELETE_URL = "api/sale_delete.php";
   const API_INLINE_URL = "api/sale_update_inline.php";
 
+  // Desktop (table)
   const tbody = document.getElementById("sales_table");
-  if (!tbody) return; // not on this page
+  // Mobile (cards)
+  const subsList = document.getElementById("subsList");
+  const tableWrap = document.querySelector(".era-table-wrap");
+  if (!tbody && !subsList) return; // not on this page
+
+  const MQ_MOBILE = window.matchMedia("(max-width: 640px)");
 
   const COLSPAN = 12;
   const CACHE_KEY = "cachedSales:v1";
   const PAGE_SIZE = 100;
 
-  // --- paging / data state ---
+  // --- data cache ---
   let allRows = []; // master dataset (from API / cache)
-  let flatRows = []; // rows currently being rendered (filtered view)
-  let renderedCount = 0;
-  let io = null;
 
-  // --- totals state (for subtotals) ---
+  // --- TABLE state ---
+  let flatRowsTable = [];
+  let renderedCountTable = 0;
   let totalsByDate = new Map();
   let countsByDate = new Map();
   let renderedByDate = new Map();
   let rowNumBase = 0;
+  let ioTable = null;
 
-  // --- inline editor state ---
+  // --- CARDS state ---
+  let flatRowsCards = [];
+  let renderedCountCards = 0;
+  let ioCards = null;
+
+  // --- inline editor state (table only) ---
   let activeEditor = null; // { td, input, span, prev }
 
   // --- search state ---
-  let currentQuery = ""; // the text currently filtering the table
+  let currentQuery = ""; // the text currently filtering
 
   // ---------------- helpers ----------------
-  const yn = (b) => (b ? "Yes" : "No");
   const svgTrash = () =>
     `<span class="era-icon"><img src="./assets/delete.svg" alt=""></span>`;
 
@@ -125,6 +128,7 @@ document
       ) + " Ks"
     );
   }
+
   function formatDate(d) {
     if (!d) return "-";
     const parts = String(d).split("-");
@@ -136,6 +140,20 @@ document
       year: "numeric",
     }).format(dt);
   }
+
+  const esc = (s) =>
+    String(s ?? "").replace(
+      /[&<>"']/g,
+      (m) =>
+        ({
+          "&": "&amp;",
+          "<": "&lt;",
+          ">": "&gt;",
+          '"': "&quot;",
+          "'": "&#39;",
+        }[m])
+    );
+
   function placeholderRow(text) {
     const tr = document.createElement("tr");
     const td = document.createElement("td");
@@ -155,19 +173,65 @@ document
     };
   }
 
-  // Build a single lowecase search string per row for fast filter
   function buildSearchKey(r) {
-    r._q = [
+    const tokenizeDate = (ymd) => {
+      if (!ymd) return [];
+      const parts = String(ymd).split("-");
+      if (parts.length !== 3) return [];
+      const [y, m, d] = parts.map((n) => parseInt(n, 10));
+      if (!y || !m || !d) return [];
+
+      const dt = new Date(Date.UTC(y, m - 1, d));
+      const monShort = dt
+        .toLocaleString("en-US", { month: "short" })
+        .toLowerCase(); // "aug"
+      const monLong = dt
+        .toLocaleString("en-US", { month: "long" })
+        .toLowerCase(); // "august"
+      const mm = String(m).padStart(2, "0");
+      const dd = String(d).padStart(2, "0");
+      const yyyy = String(y);
+
+      // Build lots of variants so substring matching “just works”
+      return [
+        `${dd} ${monShort} ${yyyy}`, // "15 aug 2025"
+        `${dd} ${monLong} ${yyyy}`, // "15 august 2025"
+        `${monShort} ${yyyy}`, // "aug 2025"
+        `${monLong} ${yyyy}`, // "august 2025"
+        `${mm} ${yyyy}`, // "08 2025"
+        `${yyyy}-${mm}`, // "2025-08"
+        `${yyyy}-${mm}-${dd}`, // "2025-08-15"
+        monShort, // "aug"
+        monLong, // "august"
+        mm, // "08"
+        yyyy, // "2025"
+      ];
+    };
+
+    const purchasedTokens = tokenizeDate(r.purchased_date);
+    const expiredTokens = tokenizeDate(r.expired_date);
+
+    // field-specific keys
+    r._qPD = purchasedTokens.join("|").toLowerCase();
+    r._qED = expiredTokens.join("|").toLowerCase();
+
+    // everything key (keeps your existing fields + both date token sets)
+    r._qAll = [
       r.customer ?? "",
       r.email ?? "",
       r.sale_product ?? "",
       r.manager ?? "",
+      ...purchasedTokens,
+      ...expiredTokens,
     ]
       .join("|")
       .toLowerCase();
+
+    // backwards-compat in case something still reads r._q
+    r._q = r._qAll;
   }
 
-  // Update in-memory + session copy for a single row, also rebuild _q if searchable fields changed
+  // Update local/cache row
   function updateLocalRow(id, patch) {
     const idStr = String(id);
     const touchesSearch =
@@ -175,7 +239,9 @@ document
       "email" in patch ||
       "manager" in patch ||
       "sale_product" in patch ||
-      "renew" in patch;
+      "renew" in patch ||
+      "purchased_date" in patch ||
+      "expired_date" in patch;
 
     // update in-memory
     allRows = allRows.map((r) => {
@@ -202,7 +268,7 @@ document
     }
   }
 
-  // ---------------- row builders ----------------
+  // ---------------- TABLE ROW BUILDERS (desktop) ----------------
   function buildSaleTr(s, displayNum) {
     const tr = document.createElement("tr");
     tr.className = "era-row";
@@ -216,7 +282,7 @@ document
     tdProd.textContent = s.sale_product ?? "-";
 
     const tdDur = document.createElement("td");
-    tdDur.className = "era-dur";
+    tdDur.className = "era-dur column-hide";
     tdDur.innerHTML = `<span class="era-badge">${s.duration ?? "-"}</span>`;
 
     const tdRenew = document.createElement("td");
@@ -249,8 +315,8 @@ document
     tdExpired.className = "text-center";
     tdExpired.textContent = formatDate(s.expired_date);
 
-    const tdManager = makeEditable("manager", s.manager);
-    const tdNote = makeEditable("note", s.note, "era-muted");
+    const tdManager = makeEditable("manager", s.manager, "column-hide");
+    const tdNote = makeEditable("note", s.note, "era-muted column-hide");
 
     const tdPrice = document.createElement("td");
     tdPrice.className = "era-price";
@@ -284,17 +350,43 @@ document
     return tr;
   }
 
+  // Keep these in sync with your table:
+  // total columns = 12, price is the 2nd-to-last column.
+  const TOTAL_COLS = 12;
+  const PRICE_COL_INDEX = TOTAL_COLS - 2; // 10
+
   function buildSubtotalTr(dateKey) {
     const tr = document.createElement("tr");
     tr.className = "era-row era-subtotal";
+
+    // Label spans the columns that are ALWAYS visible before Price on mobile:
+    // (Num, Product, Renew, Customer, Email, Purchased, Expired) = 7 cols
     const tdLabel = document.createElement("td");
-    tdLabel.colSpan = 10;
+    tdLabel.colSpan = 7;
     tdLabel.textContent = `Total for ${formatDate(dateKey)}`;
+    tr.appendChild(tdLabel);
+
+    // Add filler cells for the columns that are hidden on mobile
+    // but visible on desktop BEFORE the Price column:
+    // Duration (idx 2), Manager (idx 8), Note (idx 9) → 3 fillers.
+    // Give them the same "column-hide" class so they disappear on narrow view.
+    for (let i = 0; i < 3; i++) {
+      const tdFill = document.createElement("td");
+      tdFill.className = "column-hide";
+      tr.appendChild(tdFill);
+    }
+
+    // Price column (aligns exactly with header "Price")
     const tdSum = document.createElement("td");
     tdSum.className = "era-price";
+    tdSum.style.padding = "0.4rem 0.4rem";
     tdSum.textContent = formatKyat(totalsByDate.get(dateKey) || 0);
+    tr.appendChild(tdSum);
+
+    // Actions column placeholder (keeps grid intact)
     const tdEmpty = document.createElement("td");
-    tr.append(tdLabel, tdSum, tdEmpty);
+    tr.appendChild(tdEmpty);
+
     return tr;
   }
 
@@ -310,7 +402,7 @@ document
     });
   }
 
-  // ---------------- inline editing ----------------
+  // ---------------- INLINE EDITING (table only) ----------------
   function startInlineEdit(td) {
     if (!td || td.classList.contains("editing")) return;
 
@@ -419,7 +511,7 @@ document
 
       // keep filtered view consistent (row may fall out/in due to edit)
       if (currentQuery) {
-        renderRowsProgressive(filterRowsByQuery(allRows, currentQuery));
+        renderViewport(filterRowsByQuery(allRows, currentQuery));
       }
     } catch (err) {
       // rollback on error
@@ -431,6 +523,7 @@ document
   }
 
   function initInlineEditing() {
+    if (!tbody) return;
     tbody.addEventListener("dblclick", (e) => {
       const td = e.target.closest(".editable-cell");
       if (td) startInlineEdit(td);
@@ -464,14 +557,41 @@ document
   // ---------------- search (client-side, cached) ----------------
   function filterRowsByQuery(rows, q) {
     if (!q) return rows;
-    const ql = q.trim().toLowerCase();
-    return rows.filter((r) => (r._q || "").includes(ql));
+    let raw = q.trim().toLowerCase();
+    if (!raw) return rows;
+
+    let mode = "all"; // "pd" | "ed" | "all"
+    if (raw.startsWith("pd:")) {
+      mode = "pd";
+      raw = raw.slice(3).trim();
+    } else if (raw.startsWith("ed:")) {
+      mode = "ed";
+      raw = raw.slice(3).trim();
+    }
+
+    // If user typed only "pd:" or "ed:" with nothing after, just return all.
+    if (!raw) return rows;
+
+    const getter =
+      mode === "pd"
+        ? (r) => r._qPD || ""
+        : mode === "ed"
+        ? (r) => r._qED || ""
+        : (r) => r._qAll || r._q || "";
+
+    return rows.filter((r) => getter(r).includes(raw));
   }
 
   function applySearchRender() {
     const input = document.getElementById("search_customer");
     currentQuery = (input?.value || "").trim();
-    renderRowsProgressive(filterRowsByQuery(allRows, currentQuery));
+
+    // Re-render filtered list (starts at 100)
+    renderViewport(filterRowsByQuery(allRows, currentQuery));
+
+    // Optional: reset scroll so the observer doesn’t instantly fire
+    const wrap = document.querySelector(".era-table-wrap");
+    if (wrap) wrap.scrollTo({ top: 0, behavior: "instant" });
   }
 
   function setupCustomerSearch() {
@@ -494,22 +614,23 @@ document
       setTimeout(() => {
         if (!input.value) {
           currentQuery = "";
-          renderRowsProgressive(allRows);
+          renderViewport(allRows);
         }
       }, 140);
     });
   }
 
-  // ---------------- rendering ----------------
-  function appendNextChunk() {
-    if (renderedCount >= flatRows.length) return;
+  // ---------------- TABLE RENDER (desktop) ----------------
+  function appendNextChunkTable() {
+    if (!tbody) return;
+    if (renderedCountTable >= flatRowsTable.length) return;
 
     const frag = document.createDocumentFragment();
-    const start = renderedCount;
-    const end = Math.min(flatRows.length, start + PAGE_SIZE);
+    const start = renderedCountTable;
+    const end = Math.min(flatRowsTable.length, start + PAGE_SIZE);
 
     for (let i = start; i < end; i++) {
-      const s = flatRows[i];
+      const s = flatRowsTable[i];
       const d = s.purchased_date || "";
 
       frag.appendChild(buildSaleTr(s, ++rowNumBase));
@@ -520,39 +641,166 @@ document
     }
 
     tbody.appendChild(frag);
-    renderedCount = end;
+    hideLoader();
+    renderedCountTable = end;
 
-    if (renderedCount >= flatRows.length && io) {
-      io.disconnect();
-      io = null;
+    if (renderedCountTable >= flatRowsTable.length && ioTable) {
+      ioTable.disconnect();
+      ioTable = null;
     }
   }
 
   function renderRowsProgressive(rows) {
+    if (!tbody) return;
+
+    // kill cards observer if switching
+    if (ioCards) {
+      ioCards.disconnect();
+      ioCards = null;
+    }
+
     tbody.innerHTML = "";
     if (!Array.isArray(rows) || rows.length === 0) {
       tbody.appendChild(placeholderRow("No sales found."));
-      flatRows = [];
+      flatRowsTable = [];
       return;
     }
 
-    flatRows = rows.slice();
-    buildDailyStats(flatRows);
+    flatRowsTable = rows.slice();
+    buildDailyStats(flatRowsTable);
 
-    renderedCount = 0;
+    renderedCountTable = 0;
     rowNumBase = 0;
-    appendNextChunk();
+    appendNextChunkTable();
 
     const sentinel = document.getElementById("scrollSentinel");
     if (!sentinel) return;
 
-    if (io) io.disconnect();
-    io = new IntersectionObserver(
+    if (ioTable) ioTable.disconnect();
+    ioTable = new IntersectionObserver(
       (entries) =>
-        entries.forEach((e) => e.isIntersecting && appendNextChunk()),
+        entries.forEach((e) => e.isIntersecting && appendNextChunkTable()),
       { root: null, rootMargin: "0px 0px 200px 0px", threshold: 0 }
     );
-    io.observe(sentinel);
+    ioTable.observe(sentinel);
+  }
+
+  // ---------------- CARD RENDER (mobile) ----------------
+  function appendNextChunkCards() {
+    if (!subsList) return;
+    if (renderedCountCards >= flatRowsCards.length) return;
+
+    const frag = document.createDocumentFragment();
+    const start = renderedCountCards;
+    const end = Math.min(flatRowsCards.length, start + PAGE_SIZE);
+
+    for (let i = start; i < end; i++) {
+      const r = flatRowsCards[i];
+      const product = esc(r.sale_product ?? "-");
+      const renew = Number.isFinite(+r.renew) ? +r.renew : r.renew ?? "-";
+      const name = esc(r.customer ?? "-");
+      const email = esc(r.email ?? "-");
+      const manager = esc(r.manager ?? "-");
+      const purchased = formatDate(r.purchased_date);
+      const expired = formatDate(r.expired_date);
+      const price = formatKyat(r.price);
+
+      const article = document.createElement("article");
+      article.className = "subs-card";
+      article.innerHTML = `
+        <div class="subs-row subs-row-top">
+          <div class="subs-product">${product}</div>
+          <div class="subs-renew"><span class="subs-label">Renew: </span><span>${esc(
+            renew
+          )}</span></div>
+        </div>
+
+        <div class="subs-row subs-name">
+          <span class="subs-label">Name:</span>
+          <span>${name}</span>
+        </div>
+        <div class="subs-row subs-name">
+          <span class="subs-label">Email:</span>
+          <span>${email}</span>
+        </div>
+        <div class="subs-row subs-name">
+          <span class="subs-label">Manager:</span>
+          <span>${manager}</span>
+        </div>
+
+        <div class="subs-row subs-dates">
+          <div class="subs-purchased">
+            <span class="subs-label">Purchased:</span>
+            <span>${purchased}</span>
+          </div>
+          <div class="subs-expire">
+            <span class="subs-label">Expire: </span>
+            <span>${expired}</span>
+          </div>
+        </div>
+
+        <div class="subs-row subs-price">${price}</div>
+      `;
+      frag.appendChild(article);
+    }
+
+    subsList.appendChild(frag);
+    hideLoader();
+    renderedCountCards = end;
+
+    if (renderedCountCards >= flatRowsCards.length && ioCards) {
+      ioCards.disconnect();
+      ioCards = null;
+    }
+  }
+
+  function renderCardsProgressive(rows) {
+    if (!subsList) return;
+
+    // kill table observer if switching
+    if (ioTable) {
+      ioTable.disconnect();
+      ioTable = null;
+    }
+
+    subsList.innerHTML = "";
+    if (!rows || rows.length === 0) {
+      subsList.innerHTML = `<article class="subs-card"><div class="subs-row">No sales found.</div></article>`;
+      flatRowsCards = [];
+      return;
+    }
+
+    flatRowsCards = rows.slice();
+    renderedCountCards = 0;
+    appendNextChunkCards();
+
+    const sentinel = document.getElementById("scrollSentinel");
+    if (!sentinel) return;
+
+    if (ioCards) ioCards.disconnect();
+    ioCards = new IntersectionObserver(
+      (entries) =>
+        entries.forEach((e) => e.isIntersecting && appendNextChunkCards()),
+      { root: null, rootMargin: "0px 0px 200px 0px", threshold: 0 }
+    );
+    ioCards.observe(sentinel);
+  }
+
+  // ---------------- Viewport dispatcher ----------------
+  function setContainersForViewport() {
+    // Optional: enforce visibility to avoid CSS conflicts
+    if (tableWrap)
+      tableWrap.style.display = MQ_MOBILE.matches ? "none" : "block";
+    if (subsList) subsList.style.display = MQ_MOBILE.matches ? "block" : "none";
+  }
+
+  function renderViewport(rows) {
+    setContainersForViewport();
+    if (MQ_MOBILE.matches) {
+      renderCardsProgressive(rows);
+    } else {
+      renderRowsProgressive(rows);
+    }
   }
 
   // ---------------- data ----------------
@@ -567,8 +815,15 @@ document
   }
 
   async function loadSales() {
-    tbody.innerHTML = "";
-    tbody.appendChild(placeholderRow("Loading…"));
+    // show placeholder in whichever view is active
+    showLoader();
+
+    if (!MQ_MOBILE.matches && tbody) {
+      tbody.innerHTML = "";
+      tbody.appendChild(placeholderRow("Loading…"));
+    } else if (subsList) {
+      subsList.innerHTML = `<article class="subs-card"><div class="subs-row">Loading…</div></article>`;
+    }
 
     const cached = sessionStorage.getItem(CACHE_KEY);
     if (cached) {
@@ -576,15 +831,15 @@ document
         const data = JSON.parse(cached);
         allRows = Array.isArray(data) ? data : [];
         allRows.forEach(buildSearchKey);
-        renderRowsProgressive(filterRowsByQuery(allRows, currentQuery));
+        renderViewport(filterRowsByQuery(allRows, currentQuery));
 
-        // warm refresh in background
+        // background refresh
         fetchSalesFromNetwork()
           .then((fresh) => {
             sessionStorage.setItem(CACHE_KEY, JSON.stringify(fresh));
             allRows = Array.isArray(fresh) ? fresh : [];
             allRows.forEach(buildSearchKey);
-            renderRowsProgressive(filterRowsByQuery(allRows, currentQuery));
+            renderViewport(filterRowsByQuery(allRows, currentQuery));
           })
           .catch(() => {});
         return;
@@ -598,11 +853,17 @@ document
       sessionStorage.setItem(CACHE_KEY, JSON.stringify(fresh));
       allRows = Array.isArray(fresh) ? fresh : [];
       allRows.forEach(buildSearchKey);
-      renderRowsProgressive(filterRowsByQuery(allRows, currentQuery));
+      renderViewport(filterRowsByQuery(allRows, currentQuery));
     } catch (err) {
       console.error("Failed to load sales:", err);
-      tbody.innerHTML = "";
-      tbody.appendChild(placeholderRow(`Failed to load: ${err.message}`));
+      if (!MQ_MOBILE.matches && tbody) {
+        tbody.innerHTML = "";
+        tbody.appendChild(placeholderRow(`Failed to load: ${err.message}`));
+      } else if (subsList) {
+        subsList.innerHTML = `<article class="subs-card"><div class="subs-row">Failed to load: ${esc(
+          err.message
+        )}</div></article>`;
+      }
     }
   }
 
@@ -612,7 +873,8 @@ document
   }
 
   // ---------------- delete (delegated) ----------------
-  tbody.addEventListener("click", async (e) => {
+  // Table delete
+  tbody?.addEventListener("click", async (e) => {
     const btn = e.target.closest('button.era-icon-btn[data-action="delete"]');
     if (!btn) return;
 
@@ -649,14 +911,51 @@ document
     }
   });
 
+  // (Optional) If you add delete buttons inside cards, wire them here:
+  subsList?.addEventListener("click", async (e) => {
+    const btn = e.target.closest('button.era-icon-btn[data-action="delete"]');
+    if (!btn) return;
+    const article = btn.closest(".subs-card");
+    const id = Number(article?.dataset?.id);
+    if (!id) return; // Only works if you render data-id on the card
+    if (!confirm(`Delete #${id}? This cannot be undone.`)) return;
+
+    btn.disabled = true;
+    btn.classList.add("disableBtn");
+    try {
+      const resp = await fetch(API_DELETE_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify({ id }),
+      });
+      const json = await resp.json().catch(() => ({}));
+      if (!resp.ok || !json.success)
+        throw new Error(json.error || `HTTP ${resp.status}`);
+      await refreshCacheAndReload();
+    } catch (err) {
+      alert(`Delete failed: ${err.message}`);
+      btn.disabled = false;
+      btn.classList.remove("disableBtn");
+    }
+  });
+
   // ---------------- init ----------------
+  // re-render when crossing the breakpoint
+  MQ_MOBILE.addEventListener("change", () => {
+    renderViewport(filterRowsByQuery(allRows, currentQuery));
+  });
+
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", loadSales);
   } else {
     loadSales();
   }
-  setupCustomerSearch(); // <-- enable client-side search (debounced + precomputed)
-  initInlineEditing();
+
+  setupCustomerSearch(); // debounced search
+  initInlineEditing(); // applies to table only
   window.refreshSalesTable = refreshCacheAndReload;
 })();
 
@@ -911,14 +1210,14 @@ document
         if (container) container.style.display = "none";
       }, 800);
 
-      // refresh table (cache invalidation inside)
+      // refresh table/cards (cache invalidation inside)
       if (typeof window.refreshSalesTable === "function") {
         await window.refreshSalesTable();
       }
 
       // Reset fields
       form.reset();
-      if (elProduct) elProduct.selectedIndex = 0;
+      if (elProduct) elProduct.selectedIndexF = 0;
       if (elPurchase) elPurchase.value = todayDate();
       if (elEndDate) elEndDate.value = "";
       validate();

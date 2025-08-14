@@ -20,8 +20,8 @@ if (!empty($_SESSION['auth']) || remember_try_login_from_cookie()) {
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>Eraverse • Login </title>
-    <link rel="stylesheet" href="./style/style.css">
-    <link rel="stylesheet" href="./style/login.css">
+    <link rel="stylesheet" href="./style/style.min.css">
+    <link rel="stylesheet" href="./style/login.min.css">
 </head>
 
 <body>

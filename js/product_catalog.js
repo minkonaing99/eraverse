@@ -245,12 +245,12 @@
       tdSupplier.textContent = p.supplier ?? "-";
 
       const tdNote = document.createElement("td");
-      tdNote.className = "era-muted";
+      tdNote.className = "era-muted column-hide";
       tdNote.title = p.note ?? "";
       tdNote.textContent = p.note ?? "-";
 
       const tdLink = document.createElement("td");
-      tdLink.className = "era-muted";
+      tdLink.className = "era-muted column-hide";
       tdLink.textContent = p.link ? p.link : "-";
 
       const tdWholesale = document.createElement("td");

@@ -19,8 +19,8 @@ $user = htmlspecialchars($_SESSION['user']['username'] ?? 'Guest', ENT_QUOTES);
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Eraverse • Product Catalog</title>
-    <link rel="stylesheet" href="./style/style.css">
-    <link rel="stylesheet" href="./style/product_catalog.css">
+    <link rel="stylesheet" href="./style/style.min.css">
+    <link rel="stylesheet" href="./style/product_catalog.min.css">
 </head>
 
 <body>
@@ -242,8 +242,8 @@ $user = htmlspecialchars($_SESSION['user']['username'] ?? 'Guest', ENT_QUOTES);
                             <th class="era-dur">Dur</th>
                             <th class="era-renew" style="text-align: center;">Renew</th>
                             <th class="era-supplier" style="text-align: center;">Supplier</th>
-                            <th>Note</th>
-                            <th>Link</th>
+                            <th class="column-hide">Note</th>
+                            <th class="column-hide">Link</th>
                             <th class="era-price" style="text-align: right;">WS Price</th>
                             <th class="era-price" style="text-align: right;">Retail Price</th>
 

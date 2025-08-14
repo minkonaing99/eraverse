@@ -19,13 +19,166 @@ $user = htmlspecialchars($_SESSION['user']['username'] ?? 'Guest', ENT_QUOTES);
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Eraverse • Sales Overview</title>
-    <link rel="stylesheet" href="./style/style.css">
-    <link rel="stylesheet" href="./style/sales_overview.css">
+    <link rel="stylesheet" href="./style/style.min.css">
+    <link rel="stylesheet" href="./style/sales_overview.min.css">
+    <style>
+        .era-table-wrap {
+            display: block;
+        }
+
+        .subs-list {
+            display: none;
+        }
+
+        /* ===== RESPONSIVE TOGGLE: Mobile shows cards, hides table ===== */
+        @media (max-width: 640px) {
+
+            .era-table-wrap {
+                display: none;
+            }
+
+            .subs-list {
+                display: block;
+            }
+
+
+            .menu-bar {
+                border-radius: 100px;
+                border: 0px;
+
+            }
+
+            .subs-list {
+                display: block;
+            }
+
+            .subs-card {
+                background: var(--card);
+                border: 1px solid var(--line);
+                border-radius: 14px;
+                padding: .9rem 1rem;
+                color: #e6e9ef;
+                box-shadow: 0 10px 30px rgba(0, 0, 0, .25);
+                margin: .5rem 0rem;
+
+            }
+
+            .subs-card:hover {
+                background: #131722;
+            }
+
+            .subs-row {
+                margin: .28rem 0;
+            }
+
+            .subs-row-top {
+                display: grid;
+                grid-template-columns: 1fr 72px;
+                align-items: center;
+                gap: .5rem;
+            }
+
+            .subs-product {
+                font-size: .8rem;
+                text-align: left;
+                font-weight: 700;
+                line-height: 1.2;
+            }
+
+            .subs-renew {
+                text-align: center;
+                font-size: .8rem;
+
+            }
+
+            .subs-duration .era-badge {
+                display: inline-flex;
+                min-width: 28px;
+                height: 20px;
+                font-size: .72rem;
+            }
+
+            .subs-name {
+                text-align: left;
+                font-size: .8rem;
+
+            }
+
+            .subs-email {
+                text-align: left;
+                overflow-wrap: anywhere;
+                font-size: .8rem;
+
+            }
+
+            .subs-dates {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                align-items: center;
+                font-size: .8rem;
+
+            }
+
+            .subs-purchased {
+                text-align: left;
+
+            }
+
+            .subs-expire {
+                text-align: right;
+            }
+
+            .subs-label {
+                display: inline-block;
+                font-size: .7rem;
+                color: #99a1b3;
+                margin-right: rem;
+            }
+
+            .subs-price {
+                text-align: right;
+                font-weight: 500;
+                font-variant-numeric: tabular-nums;
+                font-size: .9rem;
+
+            }
+
+
+
+            /* tighten spacing on very small screens */
+            .subs-row-top {
+                grid-template-columns: 1fr 64px;
+            }
+        }
+
+        @media (max-width: 300px) {
+            .era-table-wrap {
+                display: none;
+            }
+
+            .subs-list {
+                display: block;
+            }
+
+
+            .subs-row-top {
+                grid-template-columns: 1fr 64px;
+            }
+
+            .subs-label {
+                display: none;
+            }
+        }
+    </style>
 
 
 </head>
 
 <body>
+    <div id="appLoader" aria-hidden="true">
+        <div class="spinner" role="status" aria-label="Loading"></div>
+    </div>
+
     <header id="navbar">
         <div class="logo" aria-label="Home">
             <a href="./sales_overview.php"><img src="./assets/logo_eraverse.png" alt="Logo"></a>
@@ -119,6 +272,7 @@ $user = htmlspecialchars($_SESSION['user']['username'] ?? 'Guest', ENT_QUOTES);
         </section>
 
 
+
         <section class="era-table-card" aria-labelledby="subscriptions">
             <div class="menu-bar">
                 <h2 id="subscriptions" class="era-table-title">Subscriptions</h2>
@@ -147,48 +301,47 @@ $user = htmlspecialchars($_SESSION['user']['username'] ?? 'Guest', ENT_QUOTES);
                         <tr>
                             <th class="era-num">#</th>
                             <th>Product</th>
-                            <th class="era-dur">Dur</th>
+                            <th class="era-dur column-hide">Dur</th>
                             <th class="era-renew" style="text-align: center;">Renew</th>
                             <th>Customer</th>
                             <th class=" era-email">Email</th>
                             <th style="text-align: center;">Purchased</th>
                             <th style="text-align: center;">End Date</th>
-                            <th class=" era-supplier" style="text-align: left;">Manager</th>
-                            <th>Note</th>
+                            <th class=" era-supplier column-hide" style="text-align: left;">Manager</th>
+                            <th class="column-hide">Note</th>
                             <th class=" era-price" style="text-align: right;">Price</th>
                             <th class="era-actions" aria-label="actions"></th>
                         </tr>
                     </thead>
                     <tbody id="sales_table">
-                        <tr class="era-row">
-                            <td class="era-num">1</td>
-                            <td>Spotify Family (3 Months)</td>
-                            <td class="era-dur"><span class="era-badge">3</span></td>
-                            <td class="era-renew">Yes</td>
-                            <td>Nay Dwe Naung</td>
-                            <td>thetthtkhine.1968@gmail.com</td>
-                            <td class="text-center">08 Aug 2025</td>
-                            <td class="text-center">08 Nov 2025</td>
-                            <td class="era-supplier">jim</td>
-                            <td class="era-muted">Lorem ipsum dolor sit amet consectetur adipisicing elit. Voluptates,
-                                eum reprehenderit. A incidunt, doloremque saepe ex mollitia officiis commodi. Doloribus
-                                in quibusdam fugiat porro tempora esse harum facere maxime dignissimos.</td>
-                            <td class="era-price">10,000 Ks</td>
-                            <td class="era-actions">
-                                <button class="era-icon-btn" aria-label="Delete row 1" title="Delete">
-                                    <span class="era-icon">
-                                        <img src="./assets/delete.svg" alt="">
-                                    </span>
-                                </button>
-                            </td>
-                        </tr>
 
 
                     </tbody>
                 </table>
             </div>
         </section>
+
+        <div class="subs-list" id="subsList">
+
+        </div>
+
+
+
+        <!-- Put this AFTER BOTH the table wrapper and the card list -->
+        <div id="scrollSentinel" aria-hidden="true" style="height:1px;"></div>
+
+
     </main>
+    <script>
+        // ---- loader helpers ----
+        const appLoaderEl = document.getElementById("appLoader");
+        const showLoader = () => appLoaderEl?.classList.remove("hidden");
+        const hideLoader = () => {
+            if (!appLoaderEl) return;
+            // let the first paint happen, then fade
+            requestAnimationFrame(() => appLoaderEl.classList.add("hidden"));
+        };
+    </script>
     <script src="./js/nav.js"></script>
     <script src="./js/sales_overview.js"></script>
     <script src="./js/download_csv.js"></script>
