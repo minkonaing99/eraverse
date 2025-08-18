@@ -497,6 +497,12 @@ document
     try {
       const payload = { id };
       payload[field] = next || null;
+
+      // Show loading on the cell being edited
+      if (window.LoadingSystem) {
+        window.LoadingSystem.setButtonLoading(td, true);
+      }
+
       const res = await fetch(API_INLINE_URL, {
         method: "POST",
         headers: {
@@ -519,6 +525,10 @@ document
       if (field === "note") td.title = prev || "";
       updateLocalRow(id, { [field]: prev || null });
       alert(`Failed to save ${field}: ${err.message}`);
+    } finally {
+      if (window.LoadingSystem) {
+        window.LoadingSystem.setButtonLoading(td, false);
+      }
     }
   }
 
@@ -815,7 +825,16 @@ document
   }
 
   async function loadSales() {
-    // show placeholder in whichever view is active
+    // Start loading with minimum 1 second display
+    const loadingStartTime = Date.now();
+    const minLoadingTime = 1000; // 1 second minimum
+
+    // Show global loading overlay
+    if (window.LoadingSystem) {
+      window.LoadingSystem.showGlobalLoading("Loading sales data...");
+    }
+
+    // Show placeholder in whichever view is active
     showLoader();
 
     if (!MQ_MOBILE.matches && tbody) {
@@ -842,6 +861,22 @@ document
             renderViewport(filterRowsByQuery(allRows, currentQuery));
           })
           .catch(() => {});
+
+        // Ensure minimum loading time for cached data
+        const elapsed = Date.now() - loadingStartTime;
+        if (elapsed < minLoadingTime) {
+          setTimeout(() => {
+            if (window.LoadingSystem) {
+              window.LoadingSystem.hideGlobalLoading();
+            }
+            hideLoader();
+          }, minLoadingTime - elapsed);
+        } else {
+          if (window.LoadingSystem) {
+            window.LoadingSystem.hideGlobalLoading();
+          }
+          hideLoader();
+        }
         return;
       } catch {
         sessionStorage.removeItem(CACHE_KEY);
@@ -854,6 +889,22 @@ document
       allRows = Array.isArray(fresh) ? fresh : [];
       allRows.forEach(buildSearchKey);
       renderViewport(filterRowsByQuery(allRows, currentQuery));
+
+      // Ensure minimum loading time for fresh data
+      const elapsed = Date.now() - loadingStartTime;
+      if (elapsed < minLoadingTime) {
+        setTimeout(() => {
+          if (window.LoadingSystem) {
+            window.LoadingSystem.hideGlobalLoading();
+          }
+          hideLoader();
+        }, minLoadingTime - elapsed);
+      } else {
+        if (window.LoadingSystem) {
+          window.LoadingSystem.hideGlobalLoading();
+        }
+        hideLoader();
+      }
     } catch (err) {
       console.error("Failed to load sales:", err);
       if (!MQ_MOBILE.matches && tbody) {
@@ -864,6 +915,12 @@ document
           err.message
         )}</div></article>`;
       }
+
+      // Hide loading on error
+      if (window.LoadingSystem) {
+        window.LoadingSystem.hideGlobalLoading();
+      }
+      hideLoader();
     }
   }
 
@@ -906,6 +963,7 @@ document
     } catch (err) {
       console.error("Delete failed:", err);
       alert(`Delete failed: ${err.message}`);
+    } finally {
       btn.disabled = false;
       btn.classList.remove("disableBtn");
     }
@@ -922,6 +980,7 @@ document
 
     btn.disabled = true;
     btn.classList.add("disableBtn");
+
     try {
       const resp = await fetch(API_DELETE_URL, {
         method: "POST",
@@ -937,6 +996,7 @@ document
       await refreshCacheAndReload();
     } catch (err) {
       alert(`Delete failed: ${err.message}`);
+    } finally {
       btn.disabled = false;
       btn.classList.remove("disableBtn");
     }

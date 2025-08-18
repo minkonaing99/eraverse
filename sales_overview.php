@@ -18,6 +18,7 @@ $user = htmlspecialchars($_SESSION['user']['username'] ?? 'Guest', ENT_QUOTES);
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Eraverse • Sales Overview</title>
     <link rel="stylesheet" href="./style/style.min.css">
+    <link rel="stylesheet" href="./style/loading.css">
     <link rel="stylesheet" href="./style/sales_overview.min.css">
     <style>
         .era-table-wrap {
@@ -225,7 +226,7 @@ $user = htmlspecialchars($_SESSION['user']['username'] ?? 'Guest', ENT_QUOTES);
             </div>
 
 
-            <section class="era-table-card mb" id="add_sales">
+            <section class="era-table-card mb " id="add_sales" style="display: none;">
                 <div class="menu-bar">
                     <h2 class="era-table-title">Add Sales</h2>
                 </div>
@@ -296,7 +297,7 @@ $user = htmlspecialchars($_SESSION['user']['username'] ?? 'Guest', ENT_QUOTES);
 
         <section class="era-table-card" aria-labelledby="subscriptions">
             <div class="era-table-wrap">
-                <table class="era-table" role="table" aria-label="Subscriptions table">
+                <table class="era-table" role="table">
                     <thead>
                         <tr>
                             <th class="era-num">#</th>
@@ -314,8 +315,6 @@ $user = htmlspecialchars($_SESSION['user']['username'] ?? 'Guest', ENT_QUOTES);
                         </tr>
                     </thead>
                     <tbody id="sales_table">
-
-
                     </tbody>
                 </table>
             </div>
@@ -341,6 +340,7 @@ $user = htmlspecialchars($_SESSION['user']['username'] ?? 'Guest', ENT_QUOTES);
             requestAnimationFrame(() => appLoaderEl.classList.add("hidden"));
         };
     </script>
+    <script src="./js/loading.js"></script>
     <script src="./js/nav.js"></script>
     <script src="./js/sales_overview.js"></script>
     <script src="./js/download_csv.js"></script>

@@ -89,7 +89,6 @@ $user = htmlspecialchars($_SESSION['user']['username'] ?? 'Guest', ENT_QUOTES);
                                     <option disabled>Choose...</option>
                                     <option selected>Staff</option>
                                     <option>Admin</option>
-                                    <option>Owner</option>
                                 </select>
                             </div>
 
