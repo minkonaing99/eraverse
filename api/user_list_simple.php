@@ -6,7 +6,7 @@ declare(strict_types=1);
 require __DIR__ . '/session_bootstrap.php';
 require __DIR__ . '/auth.php';
 
-auth_require_login(['admin', 'staff']);
+auth_require_login(['admin', 'staff', 'owner']);
 
 $role = ucfirst($_SESSION['user']['role'] ?? '');
 $user = htmlspecialchars($_SESSION['user']['username'] ?? 'Guest', ENT_QUOTES);

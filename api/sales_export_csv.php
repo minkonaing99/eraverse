@@ -31,14 +31,18 @@ $tryPaths = [
 
 $loaded = false;
 
+require_once __DIR__ . '/session_bootstrap.php';
+require_once __DIR__ . '/auth.php';
 require_once __DIR__ . '/dbinfo.php';
+
+auth_require_login(['admin', 'owner']);
 
 // ---- Query (no sale_id in export) ----
 $sql = "
     SELECT
         sale_product,
         duration,
-        renew,          -- INT: 0,1,2,3,4,5,6,12
+        renew,      
         customer,
         email,
         purchased_date,

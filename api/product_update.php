@@ -11,7 +11,11 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     exit;
 }
 
+require_once __DIR__ . '/session_bootstrap.php';
+require_once __DIR__ . '/auth.php';
 require_once __DIR__ . '/dbinfo.php';
+
+auth_require_login(['admin', 'owner']);
 
 try {
     if (!isset($pdo) || !($pdo instanceof PDO)) {
@@ -55,12 +59,7 @@ try {
         if (!is_numeric($v)) return null;
         return number_format((float)$v, 2, '.', '');
     };
-    $isHttpUrl  = function ($u) use ($MAX_URL_LEN) {
-        if ($u === null) return true;
-        if (mb_strlen($u) > $MAX_URL_LEN) return false;
-        if (!preg_match('~^https?://~i', $u)) return false;
-        return (bool) filter_var($u, FILTER_VALIDATE_URL);
-    };
+
     // renew: accept 1/0, true/false, "yes"/"no"
     $toRenewInt = function ($v) {
         if ($v === '' || $v === null) return null;
@@ -152,11 +151,8 @@ try {
             if (!preg_match('~^https?://~i', $link)) $link = 'https://' . $link;
             $link = preg_replace('/\s+/', '%20', $link);
         }
-        if ($link !== null && !$isHttpUrl($link)) $errors['link'] = 'Link must be a valid http(s) URL.';
-        else {
-            $fields[] = 'link = :link';
-            $params[':link'] = $link;
-        }
+        $fields[] = 'link = :link';
+        $params[':link'] = $link;
     }
 
     if ($errors) {

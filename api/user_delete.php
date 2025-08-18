@@ -5,7 +5,11 @@ declare(strict_types=1);
 header('Content-Type: application/json; charset=utf-8');
 header('X-Content-Type-Options: nosniff');
 
+require __DIR__ . '/session_bootstrap.php';
+require __DIR__ . '/auth.php';
 require __DIR__ . '/dbinfo.php';
+
+auth_require_login(['admin', 'owner']);
 
 function json_fail(string $msg, int $code = 400): void
 {

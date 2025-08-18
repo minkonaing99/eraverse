@@ -11,7 +11,11 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     exit;
 }
 
+require_once __DIR__ . '/session_bootstrap.php';
+require_once __DIR__ . '/auth.php';
 require_once __DIR__ . '/dbinfo.php';
+
+auth_require_login(['admin', 'owner']);
 
 try {
     if (!isset($pdo) || !($pdo instanceof PDO)) {

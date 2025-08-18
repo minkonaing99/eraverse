@@ -4,7 +4,7 @@ declare(strict_types=1);
 require __DIR__ . '/api/session_bootstrap.php';
 require __DIR__ . '/api/auth.php';
 
-auth_require_login(['admin', 'staff']);
+auth_require_login(['admin', 'staff', 'owner']);
 
 $role = ucfirst($_SESSION['user']['role'] ?? '');
 $user = htmlspecialchars($_SESSION['user']['username'] ?? 'Guest', ENT_QUOTES);
@@ -185,7 +185,7 @@ $user = htmlspecialchars($_SESSION['user']['username'] ?? 'Guest', ENT_QUOTES);
         <nav aria-label="Primary">
             <div class="nav-links" id="navLinks">
                 <a href="sales_overview.php">Sales Overview</a>
-                <?php if (($_SESSION['user']['role'] ?? '') === 'admin'): ?>
+                <?php if (in_array(($_SESSION['user']['role'] ?? ''), ['admin', 'owner'])): ?>
                     <a href="product_catalog.php" aria-label="Product Catalog">Product Catalog</a>
                     <a href="summary.php" aria-label="Summary">Summary</a>
                 <?php endif; ?>
@@ -209,7 +209,7 @@ $user = htmlspecialchars($_SESSION['user']['username'] ?? 'Guest', ENT_QUOTES);
                 <h2 id="subscriptions" class="era-table-title">Subscriptions</h2>
                 <div class="btn-group">
                     <button class="icon-btn" id="refreshBtn"><img src="./assets/refresh.svg" alt="Refresh"></button>
-                    <?php if (($_SESSION['user']['role'] ?? '') === 'admin'): ?>
+                    <?php if (in_array(($_SESSION['user']['role'] ?? ''), ['admin', 'owner'])): ?>
                         <button class="icon-btn" id="downloadCsv"><img src="./assets/download.svg" alt="Download"></button>
                     <?php endif; ?>
 
