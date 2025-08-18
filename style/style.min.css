@@ -455,6 +455,31 @@ select:focus {
     box-shadow: 0 0 0 2px rgba(106, 137, 167, .25)
 }
 
+/* Safari-specific select styling */
+select {
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23a0a7b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 8px center;
+    background-size: 16px;
+    padding-right: 32px;
+}
+
+/* Remove default arrow in IE */
+select::-ms-expand {
+    display: none;
+}
+
+/* Safari specific fixes */
+@media screen and (-webkit-min-device-pixel-ratio: 0) {
+    select {
+        -webkit-appearance: none;
+        appearance: none;
+    }
+}
+
 .form-submit {
     display: flex;
     align-items: end
