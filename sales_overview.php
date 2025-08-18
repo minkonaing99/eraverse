@@ -5,9 +5,7 @@ require __DIR__ . '/api/session_bootstrap.php';
 require __DIR__ . '/api/auth.php';
 
 auth_require_login(['admin', 'staff']);
-?>
 
-<?php
 $role = ucfirst($_SESSION['user']['role'] ?? '');
 $user = htmlspecialchars($_SESSION['user']['username'] ?? 'Guest', ENT_QUOTES);
 ?>
@@ -206,75 +204,8 @@ $user = htmlspecialchars($_SESSION['user']['username'] ?? 'Guest', ENT_QUOTES);
 
     <main class="page" role="main">
 
-        <section class="era-table-card mb" id="add_sales">
-            <div class="menu-bar">
-                <h2 class="era-table-title">Add Sales</h2>
-            </div>
-            <div class="inputSalesForm">
-                <div id="inputRow" class="input-form">
-                    <form>
-                        <div class="form-row">
-                            <div class="form-col">
-                                <label for="product" class="form-label text-danger">Product List</label>
-                                <select id="product">
-                                    <option selected disabled>Choose...</option>
-                                </select>
-                            </div>
-
-                            <div class="form-col">
-                                <label for="customer" class="form-label text-danger">Customer</label>
-                                <input type="text" id="customer" placeholder="Name">
-                            </div>
-
-                            <div class="form-col">
-                                <label for="email" class="form-label">Email</label>
-                                <input type="text" id="email" placeholder="...@....">
-                            </div>
-
-                            <div class="form-col">
-                                <label for="purchase_date" class="form-label text-danger">Purchase Date</label>
-                                <input type="date" id="purchase_date">
-                            </div>
-
-                            <div class="form-col">
-                                <label for="seller" class="form-label">Manager</label>
-                                <input type="text" id="seller" placeholder="Manager">
-                            </div>
-
-                            <div class="form-col">
-                                <label for="amount" class="form-label">Amount</label>
-                                <input type="number" id="amount" step="1" placeholder="Enter price (optional)">
-                            </div>
-
-                            <div class="form-col">
-                                <label for="Notes" class="form-label">Notes</label>
-                                <input type="text" id="Notes" placeholder="Note" autocomplete="off">
-                            </div>
-
-                            <div class="form-col form-submit">
-                                <label class="invisible">Save</label>
-                                <button type="submit" class="form-btn iconLabelBtn"><img src="./assets/save.svg"
-                                        alt=""><span class="">Save</span></button>
-                            </div>
-                            <div class="feedback_text" id="feedback_addSale"></div>
-
-                        </div>
-
-                        <!-- Hidden fields -->
-                        <input type="hidden" id="renew">
-                        <input type="hidden" id="duration">
-                        <input type="hidden" id="end_date">
-                    </form>
-                </div>
-
-            </div>
-
-        </section>
-
-
-
-        <section class="era-table-card" aria-labelledby="subscriptions">
-            <div class="menu-bar">
+        <section class="sticky-menubar mb">
+            <div class="menu-bar mb">
                 <h2 id="subscriptions" class="era-table-title">Subscriptions</h2>
                 <div class="btn-group">
                     <button class="icon-btn" id="refreshBtn"><img src="./assets/refresh.svg" alt="Refresh"></button>
@@ -290,11 +221,80 @@ $user = htmlspecialchars($_SESSION['user']['username'] ?? 'Guest', ENT_QUOTES);
                     </div>
                     <button id="addSaleBtn" class="iconLabelBtn"><img src="./assets/add.svg" alt="">
                         <span class="btnLabel">Add Sales</span></button>
+                </div>
+            </div>
+
+
+            <section class="era-table-card mb" id="add_sales">
+                <div class="menu-bar">
+                    <h2 class="era-table-title">Add Sales</h2>
+                </div>
+                <div class="inputSalesForm">
+                    <div id="inputRow" class="input-form">
+                        <form>
+                            <div class="form-row">
+                                <div class="form-col">
+                                    <label for="product" class="form-label text-danger">Product List</label>
+                                    <select id="product">
+                                        <option selected disabled>Choose...</option>
+                                    </select>
+                                </div>
+
+                                <div class="form-col">
+                                    <label for="customer" class="form-label text-danger">Customer</label>
+                                    <input type="text" id="customer" placeholder="Name">
+                                </div>
+
+                                <div class="form-col">
+                                    <label for="email" class="form-label">Email</label>
+                                    <input type="text" id="email" placeholder="...@....">
+                                </div>
+
+                                <div class="form-col">
+                                    <label for="purchase_date" class="form-label text-danger">Purchase Date</label>
+                                    <input type="date" id="purchase_date">
+                                </div>
+
+                                <div class="form-col">
+                                    <label for="seller" class="form-label">Manager</label>
+                                    <input type="text" id="seller" placeholder="Manager">
+                                </div>
+
+                                <div class="form-col">
+                                    <label for="amount" class="form-label">Amount</label>
+                                    <input type="number" id="amount" step="1" placeholder="Enter price (optional)">
+                                </div>
+
+                                <div class="form-col">
+                                    <label for="Notes" class="form-label">Notes</label>
+                                    <input type="text" id="Notes" placeholder="Note" autocomplete="off">
+                                </div>
+
+                                <div class="form-col form-submit">
+                                    <label class="invisible">Save</label>
+                                    <button type="submit" class="form-btn iconLabelBtn"><img src="./assets/save.svg"
+                                            alt=""><span class="">Save</span></button>
+                                </div>
+                                <div class="feedback_text" id="feedback_addSale"></div>
+
+                            </div>
+
+                            <!-- Hidden fields -->
+                            <input type="hidden" id="renew">
+                            <input type="hidden" id="duration">
+                            <input type="hidden" id="end_date">
+                        </form>
+                    </div>
 
                 </div>
 
-            </div>
+            </section>
 
+
+
+        </section>
+
+        <section class="era-table-card" aria-labelledby="subscriptions">
             <div class="era-table-wrap">
                 <table class="era-table" role="table" aria-label="Subscriptions table">
                     <thead>
@@ -322,7 +322,6 @@ $user = htmlspecialchars($_SESSION['user']['username'] ?? 'Guest', ENT_QUOTES);
         </section>
 
         <div class="subs-list" id="subsList">
-
         </div>
 
 
