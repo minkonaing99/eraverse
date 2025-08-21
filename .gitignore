@@ -2,7 +2,7 @@
 python-bot/creds.py
 
 # Database configuration file (contains sensitive data)
-dbinfo.php
+api/dbinfo.php
 
 # Python cache directories
 __pycache__/
