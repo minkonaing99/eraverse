@@ -1,5 +1,5 @@
 <?php
-// api/sales_minimal.php
+// api/ws_sales_minimal.php
 declare(strict_types=1);
 header('Content-Type: application/json; charset=utf-8');
 
@@ -19,11 +19,11 @@ try {
     }
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
-    // Query both retail and wholesale sales
+    // Query only wholesale sales
     $stmt = $pdo->query("
         SELECT
             sale_id,
-            CONCAT('Retail - ', sale_product) as sale_product,
+            sale_product,
             price,
             profit,
             purchased_date,
@@ -31,26 +31,8 @@ try {
             customer,
             email,
             renew,
-            duration,
-            'retail' as sale_type
-        FROM sale_overview
-        
-        UNION ALL
-        
-        SELECT
-            sale_id,
-            CONCAT('Wholesale - ', sale_product) as sale_product,
-            price,
-            profit,
-            purchased_date,
-            expired_date,
-            customer,
-            email,
-            renew,
-            duration,
-            'wholesale' as sale_type
+            duration
         FROM ws_sale_overview
-        
         ORDER BY purchased_date DESC, sale_id DESC
     ");
 
@@ -73,9 +55,6 @@ try {
 
         // Duration as INT (months)
         $r['duration']       = isset($r['duration'])       ? (int)$r['duration']       : null;
-
-        // Sale type (retail or wholesale)
-        $r['sale_type']      = $r['sale_type']             ?? 'retail';
     }
     unset($r);
 
@@ -89,7 +68,7 @@ try {
     // Error: discard buffered HTML and return JSON error
     ob_end_clean();
     http_response_code(500);
-    error_log('sales_minimal.php error: ' . $e->getMessage());
+    error_log('ws_sales_minimal.php error: ' . $e->getMessage());
     echo json_encode(
         ['success' => false, 'error' => $e->getMessage()],
         JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES

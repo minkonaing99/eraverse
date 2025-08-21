@@ -4,7 +4,17 @@ document
     const btn = this;
     btn.disabled = true;
     try {
-      const resp = await fetch("api/sales_export_csv.php", {
+      // Check which page is currently active
+      const retailBtn = document.getElementById("retail_page");
+      const isRetailActive =
+        retailBtn && retailBtn.classList.contains("btn-active");
+
+      const apiUrl = isRetailActive
+        ? "api/sales_export_csv.php"
+        : "api/ws_sales_export_csv.php";
+      const filename = isRetailActive ? "retail_sales" : "wholesale_sales";
+
+      const resp = await fetch(apiUrl, {
         headers: { Accept: "text/csv" },
       });
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
@@ -12,7 +22,7 @@ document
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `sales_export_${new Date()
+      a.download = `${filename}_export_${new Date()
         .toISOString()
         .slice(0, 19)
         .replace(/[-:T]/g, "")}.csv`;

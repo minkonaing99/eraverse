@@ -19,6 +19,7 @@ $user = htmlspecialchars($_SESSION['user']['username'] ?? 'Guest', ENT_QUOTES);
     <title>Eraverse • Product Catalog</title>
     <link rel="stylesheet" href="./style/style.min.css">
     <link rel="stylesheet" href="./style/product_catalog.min.css">
+    <link rel="stylesheet" href="./style/wholesale.css">
 </head>
 
 <body>
@@ -55,7 +56,8 @@ $user = htmlspecialchars($_SESSION['user']['username'] ?? 'Guest', ENT_QUOTES);
         <div class="sticky-menubar">
             <section class="era-table-card mb">
                 <div class="menu-bar">
-                    <h2 id="product_catalog" class="era-table-title">Product Catalog</h2>
+                    <h2 id="product_catalog" class="era-table-title"><span class="btn-active" id="retail_page">Retail</span> <span class="btn-inactive" id="wholesale_page">Wholesale</span></h2>
+
                     <div class="btn-group">
                         <button id="userSettingBtn" class="iconLabelBtn catalogPage"><img src="./assets/user.svg"
                                 alt="editUser">
@@ -137,12 +139,6 @@ $user = htmlspecialchars($_SESSION['user']['username'] ?? 'Guest', ENT_QUOTES);
                                 <label for="duration" class="form-label text-danger">Duration</label>
                                 <input type="number" id="duration" placeholder="Duration">
                             </div>
-
-                            <div class="form-col">
-                                <label for="supplier" class="form-label">Supplier</label>
-                                <input type="text" id="supplier" placeholder="Supplier">
-                            </div>
-
                             <div class="form-col">
                                 <label for="renewable" class="form-label">Need Monthly Renewable</label>
                                 <select id="renewable" required>
@@ -154,14 +150,7 @@ $user = htmlspecialchars($_SESSION['user']['username'] ?? 'Guest', ENT_QUOTES);
                                     <option value="12">12</option>
                                 </select>
                             </div>
-                            <div class="form-col notes-col">
-                                <label for="note" class="form-label">Note</label>
-                                <input type="text" id="note" placeholder="Note" autocomplete="off">
-                            </div>
-                            <div class="form-col notes-col">
-                                <label for="link" class="form-label">Link</label>
-                                <input type="text" id="link" placeholder="www...." autocomplete="off">
-                            </div>
+
                             <div class="form-col">
                                 <label for="wholesale_amount" class="form-label text-danger">Wholesale Amount</label>
                                 <input type="number" id="wholesale_amount" step="1" placeholder="Enter price">
@@ -170,6 +159,22 @@ $user = htmlspecialchars($_SESSION['user']['username'] ?? 'Guest', ENT_QUOTES);
                                 <label for="retail_amount" class="form-label text-danger">Retail Amount</label>
                                 <input type="number" id="retail_amount" step="1" placeholder="Enter price">
                             </div>
+
+                            <div class="form-col">
+                                <label for="supplier" class="form-label">Supplier</label>
+                                <input type="text" id="supplier" placeholder="Supplier">
+                            </div>
+
+
+                            <div class="form-col notes-col">
+                                <label for="note" class="form-label">Note</label>
+                                <input type="text" id="note" placeholder="Note" autocomplete="off">
+                            </div>
+                            <div class="form-col notes-col">
+                                <label for="link" class="form-label">Link</label>
+                                <input type="text" id="link" placeholder="www...." autocomplete="off">
+                            </div>
+
                             <div class="form-col form-submit">
                                 <label class="invisible">Save</label>
                                 <button type="submit" class="form-btn iconLabelBtn disableBtn">
@@ -244,8 +249,8 @@ $user = htmlspecialchars($_SESSION['user']['username'] ?? 'Guest', ENT_QUOTES);
         </div>
         <!-- new -->
 
-        <!-- Table -->
-        <section class="era-table-card" aria-labelledby="product_catalog">
+        <!-- Retail Table -->
+        <section class="era-table-card retail_page" aria-labelledby="product_catalog">
             <div class="era-table-wrap">
                 <table class="era-table" role="table" aria-label="Catalog table">
                     <thead>
@@ -266,13 +271,38 @@ $user = htmlspecialchars($_SESSION['user']['username'] ?? 'Guest', ENT_QUOTES);
                     <tbody id="product_table">
                     </tbody>
                 </table>
-                <div id="scrollSentinel" style="height: 1px;"></div>
             </div>
         </section>
+
+        <!-- Wholesale Table -->
+        <section class="era-table-card wholesale_page" aria-labelledby="product_catalog">
+            <div class="era-table-wrap">
+                <table class="era-table" role="table" aria-label="Catalog table">
+                    <thead>
+                        <tr>
+                            <th class="era-num">#</th>
+                            <th class="era-product">Product</th>
+                            <th class="era-dur">Dur</th>
+                            <th class="era-renew" style="text-align: center;">Renew</th>
+                            <th class="era-supplier" style="text-align: center;">Supplier</th>
+                            <th class="column-hide">Note</th>
+                            <th class="column-hide">Link</th>
+                            <th class="era-price" style="text-align: right;">WS Price</th>
+                            <th class="era-price" style="text-align: right;">Retail Price</th>
+
+                            <th class="era-actions" aria-label="actions"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="ws_product_table">
+                    </tbody>
+                </table>
+            </div>
+        </section>
+        <div id="scrollSentinel" style="height: 1px;"></div>
     </main>
 
     <script src="./js/nav.js"></script>
-    <script src="./js/toggle.js"></script>
+    <script src="./js/product_catalog_toggle.js"></script>
     <script src="./js/product_catalog.js"></script>
     <script src="./js/about_user.js"></script>
 </body>

@@ -1,0 +1,81 @@
+<?php
+// api/ws_sales_export_csv.php
+header('Content-Type: text/csv; charset=utf-8');
+header('Content-Disposition: attachment; filename="wholesale_sales_' . date('Y-m-d') . '.csv"');
+header('Access-Control-Allow-Origin: *');
+
+require_once __DIR__ . '/dbinfo.php';
+
+try {
+    if (!isset($pdo) || !($pdo instanceof PDO)) {
+        throw new RuntimeException('PDO connection not initialized. Check dbinfo.php');
+    }
+    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+
+    $sql = "SELECT 
+                sale_id,
+                sale_product,
+                duration,
+                quantity,
+                renew,
+                customer,
+                email,
+                purchased_date,
+                expired_date,
+                manager,
+                note,
+                price,
+                profit
+            FROM ws_sale_overview 
+            ORDER BY purchased_date DESC, sale_id DESC";
+
+    $stmt = $pdo->query($sql);
+    $sales = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // Create output stream
+    $output = fopen('php://output', 'w');
+
+    // Add BOM for UTF-8
+    fprintf($output, chr(0xEF) . chr(0xBB) . chr(0xBF));
+
+    // CSV headers
+    fputcsv($output, [
+        'ID',
+        'Product',
+        'Duration',
+        'Quantity',
+        'Renew',
+        'Customer',
+        'Email',
+        'Purchase Date',
+        'Expired Date',
+        'Manager',
+        'Note',
+        'Price (Ks)',
+        'Profit (Ks)'
+    ]);
+
+    // CSV data rows
+    foreach ($sales as $sale) {
+        fputcsv($output, [
+            $sale['sale_id'],
+            $sale['sale_product'],
+            $sale['duration'] ?? '',
+            $sale['quantity'],
+            $sale['renew'],
+            $sale['customer'],
+            $sale['email'] ?? '',
+            $sale['purchased_date'],
+            $sale['expired_date'] ?? '',
+            $sale['manager'] ?? '',
+            $sale['note'] ?? '',
+            number_format($sale['price'], 0),
+            number_format($sale['profit'], 0)
+        ]);
+    }
+
+    fclose($output);
+} catch (Throwable $e) {
+    http_response_code(500);
+    echo "Error: " . $e->getMessage();
+}

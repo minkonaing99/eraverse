@@ -2,13 +2,7 @@
   "use strict";
 
   // ====== Config ======
-  const retail_API = {
-    list: "api/products_table.php",
-    insert: "api/product_insertion.php",
-    update: "api/product_update.php",
-    delete: "api/product_delete.php",
-  };
-  const wholesale_API = {
+  const API = {
     list: "api/ws_products_table.php",
     insert: "api/ws_product_insertion.php",
     update: "api/ws_product_update.php",
@@ -19,24 +13,7 @@
 
   // ====== DOM refs ======
   const $ = (id) => document.getElementById(id);
-
-  // Table references
-  const retailTbody = $("product_table");
-  const wholesaleTbody = $("ws_product_table");
-
-  // Get current active table based on which page is visible
-  function getCurrentTable() {
-    const retailSection = document.querySelector(".retail_page");
-    const wholesaleSection = document.querySelector(".wholesale_page");
-
-    if (retailSection && retailSection.style.display !== "none") {
-      return { tbody: retailTbody, api: retail_API, type: "retail" };
-    } else if (wholesaleSection && wholesaleSection.style.display !== "none") {
-      return { tbody: wholesaleTbody, api: wholesale_API, type: "wholesale" };
-    }
-    // Default to retail
-    return { tbody: retailTbody, api: retail_API, type: "retail" };
-  }
+  const tbody = $("ws_product_table");
 
   // Add form
   const addForm = document.querySelector("#inputRow form");
@@ -227,7 +204,7 @@
     return tr;
   }
 
-  function renderRows(rows, tbody) {
+  function renderRows(rows) {
     tbody.innerHTML = "";
     if (!Array.isArray(rows) || rows.length === 0) {
       tbody.appendChild(placeholderRow("No products found."));
@@ -324,26 +301,23 @@
   }
 
   async function loadProducts() {
-    const { tbody, api } = getCurrentTable();
-
     tbody.innerHTML = "";
     tbody.appendChild(placeholderRow("Loading…"));
     try {
-      const r = await fetch(api.list, {
+      const r = await fetch(API.list, {
         headers: { Accept: "application/json" },
       });
       const json = await r.json().catch(() => ({}));
       if (!r.ok || !json.success)
         throw new Error(json.error || `HTTP ${r.status}`);
-      renderRows(json.data || [], tbody);
+      renderRows(json.data || []);
     } catch (err) {
       console.error("Failed to load products:", err);
       tbody.innerHTML = "";
       tbody.appendChild(placeholderRow(`Failed to load: ${err.message}`));
     }
   }
-
-  function renumberRows(tbody) {
+  function renumberRows() {
     tbody.querySelectorAll("tr.era-row").forEach((tr, idx) => {
       const cell = tr.querySelector(".era-num");
       if (cell) cell.textContent = String(idx + 1);
@@ -351,117 +325,51 @@
   }
 
   // ====== Delete (delegated) ======
-  function setupDeleteHandlers() {
-    [retailTbody, wholesaleTbody].forEach((tbody) => {
-      if (!tbody) return;
+  tbody.addEventListener("click", async (e) => {
+    const btn = e.target.closest('button.era-icon-btn[data-action="delete"]');
+    if (!btn) return;
+    const tr = btn.closest("tr.era-row");
+    if (!tr) return;
+    const id = Number(tr.dataset.id);
+    if (!id) return alert("Missing product_id for this row.");
 
-      tbody.addEventListener("click", async (e) => {
-        const btn = e.target.closest(
-          'button.era-icon-btn[data-action="delete"]'
-        );
-        if (!btn) return;
-        const tr = btn.closest("tr.era-row");
-        if (!tr) return;
-        const id = Number(tr.dataset.id);
-        if (!id) return alert("Missing product_id for this row.");
+    const name =
+      tr.querySelector(".era-product")?.textContent?.trim() || `#${id}`;
+    if (!confirm(`Delete "${name}"?\nThis cannot be undone.`)) return;
 
-        const name =
-          tr.querySelector(".era-product")?.textContent?.trim() || `#${id}`;
-        if (!confirm(`Delete "${name}"?\nThis cannot be undone.`)) return;
-
-        const { api } = getCurrentTable();
-
-        btn.disabled = true;
-        btn.classList.add("disableBtn");
-        try {
-          const resp = await fetch(api.delete, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Accept: "application/json",
-            },
-            body: JSON.stringify({ id }),
-          });
-          const json = await resp.json().catch(() => ({}));
-          if (!resp.ok || !json.success)
-            throw new Error(json.error || `HTTP ${resp.status}`);
-          tr.remove();
-          if (!tbody.querySelector("tr.era-row")) {
-            tbody.innerHTML = "";
-            tbody.appendChild(placeholderRow("No products found."));
-          } else {
-            renumberRows(tbody);
-          }
-        } catch (err) {
-          console.error("Delete failed:", err);
-          alert(`Delete failed: ${err.message}`);
-          btn.disabled = false;
-          btn.classList.remove("disableBtn");
-        }
+    btn.disabled = true;
+    btn.classList.add("disableBtn");
+    try {
+      const resp = await fetch(API.delete, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify({ id }),
       });
-    });
-  }
+      const json = await resp.json().catch(() => ({}));
+      if (!resp.ok || !json.success)
+        throw new Error(json.error || `HTTP ${resp.status}`);
+      tr.remove();
+      if (!tbody.querySelector("tr.era-row")) {
+        tbody.innerHTML = "";
+        tbody.appendChild(placeholderRow("No products found."));
+      } else {
+        renumberRows();
+      }
+    } catch (err) {
+      console.error("Delete failed:", err);
+      alert(`Delete failed: ${err.message}`);
+      btn.disabled = false;
+      btn.classList.remove("disableBtn");
+    }
+  });
 
   // ====== Add form wiring ======
   if (addEls) {
     const validateAdd = () => validateProductForm(addEls, { formatName: true });
     attachValidation(addEls, validateAdd);
-
-    addEls.form.addEventListener("submit", async (e) => {
-      e.preventDefault();
-      const { valid, payload } = validateAdd();
-      if (!valid) return;
-
-      const { api } = getCurrentTable();
-
-      try {
-        if (addEls.feedback) {
-          addEls.feedback.style.display = "block";
-          addEls.feedback.style.color = "";
-          addEls.feedback.textContent = "Saving...";
-        }
-        addEls.saveBtn.disabled = true;
-        addEls.saveBtn.classList.add("disableBtn");
-
-        const resp = await fetch(api.insert, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Accept: "application/json",
-          },
-          body: JSON.stringify(payload),
-        });
-        const data = await resp.json().catch(() => ({}));
-        if (!resp.ok || !data.success)
-          throw new Error(data.error || `HTTP ${resp.status}`);
-
-        // success
-        addEls.form.reset();
-        setRenewableControlValue(addEls.renewable, 0); // default to 0 after save
-        validateAdd();
-        if (addEls.feedback) {
-          addEls.feedback.textContent = "Successfully Saved";
-          addEls.feedback.style.color = "white";
-        }
-        setTimeout(() => {
-          if (addEls.feedback) addEls.feedback.style.display = "none";
-          if (typeof window.hideAddProductForm === "function")
-            window.hideAddProductForm();
-          if (typeof window.refreshProductsTable === "function")
-            window.refreshProductsTable();
-        }, 800);
-      } catch (err) {
-        console.error("Save failed:", err);
-        if (addEls.feedback) {
-          addEls.feedback.style.display = "block";
-          addEls.feedback.style.color = "red";
-          addEls.feedback.textContent = `Save failed: ${err.message}`;
-        }
-      } finally {
-        addEls.saveBtn.disabled = false;
-        addEls.saveBtn.classList.remove("disableBtn");
-      }
-    });
   }
 
   // ====== Edit form wiring + openEditForm ======
@@ -501,95 +409,15 @@
 
       validateEdit();
     };
-
-    editEls.form.addEventListener("submit", async (e) => {
-      e.preventDefault();
-      const { valid, payload } = validateEdit();
-      if (!valid) return;
-
-      const { api } = getCurrentTable();
-
-      try {
-        if (editEls.feedback) {
-          editEls.feedback.style.display = "block";
-          editEls.feedback.style.color = "";
-          editEls.feedback.textContent = "Saving...";
-        }
-        editEls.saveBtn.disabled = true;
-        editEls.saveBtn.classList.add("disableBtn");
-
-        const res = await fetch(api.update, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Accept: "application/json",
-          },
-          body: JSON.stringify(payload),
-        });
-        const json = await res.json().catch(() => ({}));
-
-        if (res.status === 422) {
-          const msg = json.errors
-            ? Object.values(json.errors).join(" | ")
-            : "Validation failed.";
-          throw new Error(msg);
-        }
-        if (!res.ok || !json.success)
-          throw new Error(json.error || `HTTP ${res.status}`);
-
-        if (editEls.feedback)
-          editEls.feedback.textContent = "Successfully Saved";
-        setTimeout(() => {
-          if (editEls.feedback) editEls.feedback.style.display = "none";
-          if (typeof window.hideEditProductForm === "function")
-            window.hideEditProductForm();
-          if (typeof window.refreshProductsTable === "function")
-            window.refreshProductsTable();
-        }, 800);
-      } catch (err) {
-        console.error("Update failed:", err);
-        if (editEls.feedback) {
-          editEls.feedback.style.display = "block";
-          editEls.feedback.style.color = "red";
-          editEls.feedback.textContent = `Save failed: ${err.message}`;
-        }
-      } finally {
-        editEls.saveBtn.disabled = false;
-        editEls.saveBtn.classList.remove("disableBtn");
-      }
-    });
-  }
-
-  // ====== Tab switching and form toggle ======
-  function setupTabSwitching() {
-    const retailBtn = document.getElementById("retail_page");
-    const wholesaleBtn = document.getElementById("wholesale_page");
-
-    // Tab switching - reload products when switching tabs
-    if (retailBtn && wholesaleBtn) {
-      retailBtn.addEventListener("click", () => {
-        loadProducts(); // Reload products for retail
-      });
-
-      wholesaleBtn.addEventListener("click", () => {
-        loadProducts(); // Reload products for wholesale
-      });
-    }
   }
 
   // ====== Initial load ======
   if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", () => {
-      setupDeleteHandlers();
-      setupTabSwitching();
-      loadProducts();
-    });
+    document.addEventListener("DOMContentLoaded", loadProducts);
   } else {
-    setupDeleteHandlers();
-    setupTabSwitching();
     loadProducts();
   }
 
   // exposed for external calls
-  window.refreshProductsTable = loadProducts;
+  window.refreshWsProductTable = loadProducts;
 })();

@@ -21,7 +21,7 @@ $user = htmlspecialchars($_SESSION['user']['username'] ?? 'Guest', ENT_QUOTES);
     <link rel="stylesheet" href="./style/loading.css">
     <link rel="stylesheet" href="./style/sales_overview.min.css">
     <link rel="stylesheet" href="./style/mobile_table.css">
-
+    <link rel="stylesheet" href="./style/wholesale.css">
 
 
 </head>
@@ -60,7 +60,8 @@ $user = htmlspecialchars($_SESSION['user']['username'] ?? 'Guest', ENT_QUOTES);
 
         <section class="sticky-menubar mb">
             <div class="menu-bar mb">
-                <h2 id="subscriptions" class="era-table-title">Subscriptions</h2>
+                <h2 id="subscriptions" class="era-table-title"><span class="btn-active" id="retail_page">Retail</span> <span class="btn-inactive" id="wholesale_page">Wholesale</span></h2>
+
                 <div class="btn-group">
                     <button class="icon-btn" id="refreshBtn"><img src="./assets/refresh.svg" alt="Refresh"></button>
                     <?php if (in_array(($_SESSION['user']['role'] ?? ''), ['admin', 'owner'])): ?>
@@ -78,10 +79,10 @@ $user = htmlspecialchars($_SESSION['user']['username'] ?? 'Guest', ENT_QUOTES);
                 </div>
             </div>
 
-
-            <section class="era-table-card mb " id="add_sales" style="display: none;">
+            <!-- Retail Sales Form -->
+            <div class="era-table-card mb retail_page" id="add_sales">
                 <div class="menu-bar">
-                    <h2 class="era-table-title">Add Sales</h2>
+                    <h2 class="era-table-title">Add Retail Sales</h2>
                 </div>
                 <div class="inputSalesForm">
                     <div id="inputRow" class="input-form">
@@ -142,13 +143,82 @@ $user = htmlspecialchars($_SESSION['user']['username'] ?? 'Guest', ENT_QUOTES);
 
                 </div>
 
-            </section>
+            </div>
+
+            <!-- Wholesale Sales Form -->
+            <div class="era-table-card mb wholesale_page" id="add_ws_sales">
+                <div class="menu-bar">
+                    <h2 class="era-table-title">Add Wholesale Sales</h2>
+                </div>
+                <div class="inputSalesForm">
+                    <div id="inputRow" class="input-form">
+                        <form>
+                            <div class="form-row">
+                                <div class="form-col">
+                                    <label for="ws_product" class="form-label text-danger">Product List</label>
+                                    <select id="ws_product">
+                                        <option selected disabled>Choose...</option>
+                                    </select>
+                                </div>
+
+                                <div class="form-col">
+                                    <label for="ws_customer" class="form-label text-danger">Customer</label>
+                                    <input type="text" id="ws_customer" placeholder="Name">
+                                </div>
+
+                                <div class="form-col">
+                                    <label for="ws_quantity" class="form-label">Quantity</label>
+                                    <input type="number" id="ws_quantity" min="1" value="1" placeholder="Qty">
+                                </div>
 
 
+                                <div class="form-col">
+                                    <label for="ws_email" class="form-label">Email</label>
+                                    <input type="text" id="ws_email" placeholder="...@....">
+                                </div>
 
+                                <div class="form-col">
+                                    <label for="ws_purchase_date" class="form-label text-danger">Purchase Date</label>
+                                    <input type="date" id="ws_purchase_date">
+                                </div>
+
+                                <div class="form-col">
+                                    <label for="ws_seller" class="form-label">Manager</label>
+                                    <input type="text" id="ws_seller" placeholder="Manager">
+                                </div>
+
+                                <div class="form-col">
+                                    <label for="ws_amount" class="form-label">Amount</label>
+                                    <input type="number" id="ws_amount" step="1" placeholder="Enter price (optional)">
+                                </div>
+
+                                <div class="form-col">
+                                    <label for="ws_Notes" class="form-label">Notes</label>
+                                    <input type="text" id="ws_Notes" placeholder="Note" autocomplete="off">
+                                </div>
+
+                                <div class="form-col form-submit">
+                                    <label class="invisible">Save</label>
+                                    <button type="submit" class="form-btn iconLabelBtn"><img src="./assets/save.svg"
+                                            alt=""><span class="">Save</span></button>
+                                </div>
+                                <div class="feedback_text" id="feedback_addWsSale"></div>
+
+                            </div>
+
+                            <!-- Hidden fields -->
+                            <input type="hidden" id="ws_renew">
+                            <input type="hidden" id="ws_duration">
+                            <input type="hidden" id="ws_end_date">
+                        </form>
+                    </div>
+
+                </div>
+
+            </div>
         </section>
 
-        <section class="era-table-card" aria-labelledby="subscriptions">
+        <section class="era-table-card retail_page" aria-labelledby="subscriptions">
             <div class="era-table-wrap">
                 <table class="era-table" role="table">
                     <thead>
@@ -173,12 +243,40 @@ $user = htmlspecialchars($_SESSION['user']['username'] ?? 'Guest', ENT_QUOTES);
             </div>
         </section>
 
-        <div class="subs-list" id="subsList">
+        <div class="subs-list retail_page" id="subsList">
+        </div>
+
+        <section class="era-table-card wholesale_page" aria-labelledby="subscriptions">
+            <div class="era-table-wrap">
+                <table class="era-table" role="table">
+                    <thead>
+                        <tr>
+                            <th class="era-num">#</th>
+                            <th>Product</th>
+                            <th class="era-dur column-hide">Dur</th>
+                            <th class="era-dur">Qty</th>
+                            <th class="era-renew column-hide" style="text-align: center;">Renew</th>
+                            <th>Customer</th>
+                            <th class=" era-email">Email</th>
+                            <th style="text-align: center;">Purchased</th>
+                            <th style="text-align: center;">End Date</th>
+                            <th class=" era-supplier column-hide" style="text-align: left;">Manager</th>
+                            <th class="column-hide">Note</th>
+                            <th class=" era-price" style="text-align: right;">Price</th>
+                            <th class="era-actions" aria-label="actions"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="ws_sales_table">
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <div class="subs-list wholesale_page" id="ws_subsList">
         </div>
 
 
 
-        <!-- Put this AFTER BOTH the table wrapper and the card list -->
         <div id="scrollSentinel" aria-hidden="true" style="height:1px;"></div>
 
 
@@ -195,8 +293,11 @@ $user = htmlspecialchars($_SESSION['user']['username'] ?? 'Guest', ENT_QUOTES);
     </script>
     <script src="./js/loading.js"></script>
     <script src="./js/nav.js"></script>
+    <script src="./js/add_sales_toggle.js"></script>
     <script src="./js/sales_overview.js"></script>
+    <script src="./js/ws_sales_overview.js"></script>
     <script src="./js/download_csv.js"></script>
+
 
 
 

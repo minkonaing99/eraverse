@@ -51,7 +51,16 @@ document
     this.style.setProperty("display", "none", "important");
     this.disabled = true;
     try {
-      await (window.refreshSalesTable?.() ?? Promise.resolve());
+      // Check which page is currently active and refresh accordingly
+      const retailBtn = document.getElementById("retail_page");
+      const isRetailActive =
+        retailBtn && retailBtn.classList.contains("btn-active");
+
+      if (isRetailActive) {
+        await (window.refreshSalesTable?.() ?? Promise.resolve());
+      } else {
+        await (window.refreshWsSalesTable?.() ?? Promise.resolve());
+      }
     } finally {
       setTimeout(() => {
         this.disabled = false;
@@ -64,21 +73,21 @@ document
    Sales table/cards: cache-first + 100-per-view + daily subtotals + inline edit + search
 ----------------------------- */
 (() => {
-  const API_LIST_URL = "api/sales_table.php";
-  const API_DELETE_URL = "api/sale_delete.php";
-  const API_INLINE_URL = "api/sale_update_inline.php";
+  const API_LIST_URL = "api/ws_sales_table.php";
+  const API_DELETE_URL = "api/ws_sale_delete.php";
+  const API_INLINE_URL = "api/ws_sale_update_inline.php";
 
   // Desktop (table)
-  const tbody = document.getElementById("sales_table");
+  const tbody = document.getElementById("ws_sales_table");
   // Mobile (cards)
-  const subsList = document.getElementById("subsList");
+  const subsList = document.getElementById("ws_subsList");
   const tableWrap = document.querySelector(".era-table-wrap");
   if (!tbody && !subsList) return; // not on this page
 
   const MQ_MOBILE = window.matchMedia("(max-width: 640px)");
 
   const COLSPAN = 12;
-  const CACHE_KEY = "cachedSales:v1";
+  const CACHE_KEY = "cachedWsSales:v1";
   const PAGE_SIZE = 100;
 
   // --- data cache ---
@@ -275,9 +284,14 @@ document
     tdDur.innerHTML = `<span class="era-badge">${s.duration ?? "-"}</span>`;
 
     const tdRenew = document.createElement("td");
-    tdRenew.className = "era-renew";
+    tdRenew.className = "era-renew column-hide";
     const renewInt = Number.isInteger(+s.renew) ? +s.renew : 0;
     tdRenew.textContent = String(renewInt);
+
+    const tdQty = document.createElement("td");
+    tdQty.className = "era-dur";
+    const qtyInt = Number.isInteger(+s.quantity) ? +s.quantity : 1;
+    tdQty.innerHTML = `<span class="era-badge">${qtyInt}</span>`;
 
     const makeEditable = (field, text, extraClass = "") => {
       const td = document.createElement("td");
@@ -326,6 +340,7 @@ document
       tdNum,
       tdProd,
       tdDur,
+      tdQty,
       tdRenew,
       tdCustomer,
       tdEmail,
@@ -340,16 +355,16 @@ document
   }
 
   // Keep these in sync with your table:
-  // total columns = 12, price is the 2nd-to-last column.
-  const TOTAL_COLS = 12;
-  const PRICE_COL_INDEX = TOTAL_COLS - 2; // 10
+  // total columns = 13, price is the 2nd-to-last column.
+  const TOTAL_COLS = 13;
+  const PRICE_COL_INDEX = TOTAL_COLS - 2; // 11
 
   function buildSubtotalTr(dateKey) {
     const tr = document.createElement("tr");
     tr.className = "era-row era-subtotal";
 
     // Label spans the columns that are ALWAYS visible before Price on mobile:
-    // (Num, Product, Renew, Customer, Email, Purchased, Expired) = 7 cols
+    // (Num, Product, Qty, Customer, Email, Purchased, Expired) = 7 cols
     const tdLabel = document.createElement("td");
     tdLabel.colSpan = 7;
     tdLabel.textContent = `Total for ${formatDate(dateKey)}`;
@@ -357,9 +372,9 @@ document
 
     // Add filler cells for the columns that are hidden on mobile
     // but visible on desktop BEFORE the Price column:
-    // Duration (idx 2), Manager (idx 8), Note (idx 9) → 3 fillers.
+    // Duration (idx 2), Renew (idx 4), Manager (idx 9), Note (idx 10) → 4 fillers.
     // Give them the same "column-hide" class so they disappear on narrow view.
-    for (let i = 0; i < 3; i++) {
+    for (let i = 0; i < 4; i++) {
       const tdFill = document.createElement("td");
       tdFill.className = "column-hide";
       tr.appendChild(tdFill);
@@ -585,12 +600,20 @@ document
     const input = document.getElementById("search_customer");
     currentQuery = (input?.value || "").trim();
 
-    // Re-render filtered list (starts at 100)
-    renderViewport(filterRowsByQuery(allRows, currentQuery));
+    // Check which page is currently active
+    const retailBtn = document.getElementById("retail_page");
+    const isRetailActive =
+      retailBtn && retailBtn.classList.contains("btn-active");
 
-    // Optional: reset scroll so the observer doesn’t instantly fire
-    const wrap = document.querySelector(".era-table-wrap");
-    if (wrap) wrap.scrollTo({ top: 0, behavior: "instant" });
+    // Only apply search to wholesale page
+    if (!isRetailActive) {
+      // Re-render filtered list (starts at 100)
+      renderViewport(filterRowsByQuery(allRows, currentQuery));
+
+      // Optional: reset scroll so the observer doesn't instantly fire
+      const wrap = document.querySelector(".era-table-wrap");
+      if (wrap) wrap.scrollTo({ top: 0, behavior: "instant" });
+    }
   }
 
   function setupCustomerSearch() {
@@ -613,7 +636,14 @@ document
       setTimeout(() => {
         if (!input.value) {
           currentQuery = "";
-          renderViewport(allRows);
+          // Check which page is currently active
+          const retailBtn = document.getElementById("retail_page");
+          const isRetailActive =
+            retailBtn && retailBtn.classList.contains("btn-active");
+
+          if (!isRetailActive) {
+            renderViewport(allRows);
+          }
         }
       }, 140);
     });
@@ -696,6 +726,7 @@ document
     for (let i = start; i < end; i++) {
       const r = flatRowsCards[i];
       const product = esc(r.sale_product ?? "-");
+      const qty = Number.isFinite(+r.quantity) ? +r.quantity : 1;
       const renew = Number.isFinite(+r.renew) ? +r.renew : r.renew ?? "-";
       const name = esc(r.customer ?? "-");
       const email = esc(r.email ?? "-");
@@ -709,9 +740,7 @@ document
       article.innerHTML = `
         <div class="subs-row subs-row-top">
           <div class="subs-product">${product}</div>
-          <div class="subs-renew"><span class="subs-label">Renew: </span><span>${esc(
-            renew
-          )}</span></div>
+          <div class="subs-qty"><span class="subs-label">Qty: </span><span>${qty}</span></div>
         </div>
 
         <div class="subs-row subs-name">
@@ -1005,7 +1034,7 @@ document
 
   setupCustomerSearch(); // debounced search
   initInlineEditing(); // applies to table only
-  window.refreshSalesTable = refreshCacheAndReload;
+  window.refreshWsSalesTable = refreshCacheAndReload;
 })();
 
 /* -----------------------------
@@ -1014,21 +1043,23 @@ document
 (async () => {
   const $ = (id) => document.getElementById(id);
 
-  const form = document.querySelector("#add_sales .inputSalesForm form");
+  // Get the wholesale form
+  const form = document.querySelector("#add_ws_sales .inputSalesForm form");
   if (!form) return;
 
-  const elProduct = $("product");
-  const elCustomer = $("customer");
-  const elEmail = $("email");
-  const elPurchase = $("purchase_date");
-  const elSeller = $("seller");
-  const elAmount = $("amount");
-  const elNotes = $("Notes");
-  const elRenew = $("renew");
-  const elDuration = $("duration");
-  const elEndDate = $("end_date");
+  const elProduct = $("ws_product");
+  const elCustomer = $("ws_customer");
+  const elEmail = $("ws_email");
+  const elPurchase = $("ws_purchase_date");
+  const elSeller = $("ws_seller");
+  const elAmount = $("ws_amount");
+  const elNotes = $("ws_Notes");
+  const elRenew = $("ws_renew");
+  const elDuration = $("ws_duration");
+  const elEndDate = $("ws_end_date");
+  const elQuantity = $("ws_quantity");
   const saveBtn = form.querySelector('button[type="submit"]');
-  const feedback = $("feedback_addSale");
+  const feedback = $("feedback_addWsSale");
 
   const setDanger = (el, on) => {
     if (!el) return;
@@ -1074,7 +1105,7 @@ document
   }
 
   // Product options
-  const OPTIONS_URL = "./api/product_options.php"; // adjust if different
+  const OPTIONS_URL = "./api/ws_product_options.php"; // adjust if different
   async function loadProductOptions() {
     try {
       const r = await fetch(OPTIONS_URL, {
@@ -1176,21 +1207,22 @@ document
     const opt = elProduct.selectedOptions[0];
     const saleName = opt.textContent.trim();
     const duration = toInt(elDuration?.value) || toInt(opt.dataset.duration);
+    const quantity = toInt(elQuantity?.value) || 1;
     const retail = toMoney(opt.dataset.price);
     const wholesale = toMoney(opt.dataset.wcPrice);
     const typedAmt = toMoney(elAmount?.value);
 
     let price, profit;
     if (Number.isFinite(typedAmt)) {
-      price = typedAmt;
+      price = typedAmt * quantity;
       profit = Number.isFinite(wholesale)
-        ? Math.round((price - wholesale) * 100) / 100
+        ? Math.round((typedAmt - wholesale) * quantity * 100) / 100
         : null;
     } else {
-      price = Number.isFinite(retail) ? retail : null;
+      price = Number.isFinite(retail) ? retail * quantity : null;
       profit =
         Number.isFinite(wholesale) && Number.isFinite(retail)
-          ? Math.round((retail - wholesale) * 100) / 100
+          ? Math.round((retail - wholesale) * quantity * 100) / 100
           : null;
     }
 
@@ -1215,6 +1247,7 @@ document
     const payload = {
       sale_product: saleName,
       duration: Number.isFinite(duration) ? duration : null,
+      quantity: quantity,
       renew: finalRenew, // strict integer, never boolean
       customer: (elCustomer?.value || "").trim(),
       email: (elEmail?.value || "").trim() || null,
@@ -1233,7 +1266,7 @@ document
         saveBtn.classList.add("disableBtn");
       }
 
-      const resp = await fetch("api/sale_insertion.php", {
+      const resp = await fetch("api/ws_sale_insertion.php", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -1255,12 +1288,12 @@ document
       showFeedback("Successfully Saved", true);
       setTimeout(() => {
         if (feedback) feedback.style.display = "none";
-        if (window.hideRetailForm) window.hideRetailForm();
+        if (window.hideWholesaleForm) window.hideWholesaleForm();
       }, 800);
 
       // refresh table/cards (cache invalidation inside)
-      if (typeof window.refreshSalesTable === "function") {
-        await window.refreshSalesTable();
+      if (typeof window.refreshWsSalesTable === "function") {
+        await window.refreshWsSalesTable();
       }
 
       // Reset fields
@@ -1268,6 +1301,7 @@ document
       if (elProduct) elProduct.selectedIndex = 0;
       if (elPurchase) elPurchase.value = todayDate();
       if (elEndDate) elEndDate.value = "";
+      if (elQuantity) elQuantity.value = "1";
       validate();
     } catch (err) {
       console.error("Sale save failed:", err);

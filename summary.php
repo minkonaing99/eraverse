@@ -61,23 +61,23 @@ $user = htmlspecialchars($_SESSION['user']['username'] ?? 'Guest', ENT_QUOTES);
             <div class="kpi-grid">
                 <article class="kpi-card">
                     <div class="kpi-label">Daily Sales</div>
-                    <div class="kpi-value" data-target="0" data-suffix=" Ks">123456789
+                    <div class="kpi-value" data-target="0" data-suffix=" Ks">0
                     </div>
                 </article>
 
                 <article class="kpi-card">
                     <div class="kpi-label">Daily Profits</div>
-                    <div class="kpi-value" data-target="0" data-suffix=" Ks">111100000</div>
+                    <div class="kpi-value" data-target="0" data-suffix=" Ks">0</div>
                 </article>
 
                 <article class="kpi-card">
                     <div class="kpi-label">Monthly Sales</div>
-                    <div class="kpi-value" data-target="1007500" data-suffix=" Ks">123456789</div>
+                    <div class="kpi-value" data-target="1007500" data-suffix=" Ks">0</div>
                 </article>
 
                 <article class="kpi-card">
                     <div class="kpi-label">Monthly Profits</div>
-                    <div class="kpi-value" data-target="407500" data-suffix=" Ks">123456789</div>
+                    <div class="kpi-value" data-target="407500" data-suffix=" Ks">0</div>
                 </article>
             </div>
         </section>
