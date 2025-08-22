@@ -181,13 +181,6 @@ class UploadModal {
 
     const dataLines = isHeader ? lines.slice(1) : lines;
 
-    console.log("Header detection:", {
-      firstLine: lines[0],
-      isHeader: isHeader,
-      totalLines: lines.length,
-      dataLines: dataLines.length,
-    });
-
     // Validate maximum rows (10 data rows + 1 header = 11 total)
     const maxDataRows = 10;
     if (dataLines.length > maxDataRows) {
@@ -220,8 +213,6 @@ class UploadModal {
       console.error("Error fetching product catalog:", error);
       errors.push("Failed to fetch product catalog data");
     }
-
-    console.log("Product Catalog:", productCatalog);
 
     dataLines.forEach((line, index) => {
       const rowNumber = index + 1;
@@ -294,18 +285,6 @@ class UploadModal {
         // Calculate profit (assuming profit is 20% of price for now)
         sale.profit = Math.round(sale.price * 0.2);
 
-        console.log(`Row ${rowNumber} processed:`, sale);
-        console.log(
-          `Row ${rowNumber} purchase date:`,
-          sale.purchased_date,
-          `(type: ${typeof sale.purchased_date})`
-        );
-        console.log(
-          `Row ${rowNumber} original date:`,
-          columns[3]?.trim(),
-          `-> normalized:`,
-          sale.purchased_date
-        );
         salesData.push(sale);
       } catch (error) {
         console.error(`Error processing row ${rowNumber}:`, error);
@@ -323,8 +302,6 @@ class UploadModal {
     if (salesData.length === 0) {
       return { success: false, error: "No valid sales data found." };
     }
-
-    console.log("Final processed sales data:", salesData);
 
     // Return processed data for preview
     return {
