@@ -1,10 +1,17 @@
 <?php
 // api/ws_sales_export_csv.php
+declare(strict_types=1);
+
+require __DIR__ . '/session_bootstrap.php';
+require __DIR__ . '/auth.php';
+
+auth_require_login(['admin', 'owner']);
+
 header('Content-Type: text/csv; charset=utf-8');
 header('Content-Disposition: attachment; filename="wholesale_sales_' . date('Y-m-d') . '.csv"');
-header('Access-Control-Allow-Origin: *');
+header('X-Content-Type-Options: nosniff');
 
-require_once __DIR__ . '/dbinfo.php';
+require __DIR__ . '/dbinfo.php';
 
 try {
     if (!isset($pdo) || !($pdo instanceof PDO)) {

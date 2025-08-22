@@ -5,9 +5,7 @@ require __DIR__ . '/api/session_bootstrap.php';
 require __DIR__ . '/api/auth.php';
 
 auth_require_login(['admin', 'owner']);
-?>
 
-<?php
 $role = ucfirst($_SESSION['user']['role'] ?? '');
 $user = htmlspecialchars($_SESSION['user']['username'] ?? 'Guest', ENT_QUOTES);
 ?>
@@ -38,7 +36,11 @@ $user = htmlspecialchars($_SESSION['user']['username'] ?? 'Guest', ENT_QUOTES);
                     <a href="product_catalog.php" aria-label="Product Catalog">Product Catalog</a>
                     <a href="summary.php" aria-label="Summary">Summary</a>
                 <?php endif; ?>
+                <?php if (in_array(($_SESSION['user']['role'] ?? ''), ['owner'])): ?>
+                    <a href="user_list.php" aria-label="User List">User List</a>
+                <?php endif; ?>
                 <a href="#" aria-label="LogOut" id="logoutBtn">Log Out</a>
+
 
             </div>
 

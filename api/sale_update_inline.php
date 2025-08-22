@@ -2,6 +2,11 @@
 
 declare(strict_types=1);
 
+require __DIR__ . '/session_bootstrap.php';
+require __DIR__ . '/auth.php';
+
+auth_require_login(['admin', 'owner', 'staff']);
+
 // Always JSON, never HTML
 header('Content-Type: application/json; charset=utf-8');
 header('X-Content-Type-Options: nosniff');

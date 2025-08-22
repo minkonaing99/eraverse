@@ -18,10 +18,11 @@ $user = htmlspecialchars($_SESSION['user']['username'] ?? 'Guest', ENT_QUOTES);
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Eraverse • Sales Overview</title>
     <link rel="stylesheet" href="./style/style.min.css">
-    <link rel="stylesheet" href="./style/loading.css">
+    <link rel="stylesheet" href="./style/loading.min.css">
     <link rel="stylesheet" href="./style/sales_overview.min.css">
-    <link rel="stylesheet" href="./style/mobile_table.css">
-    <link rel="stylesheet" href="./style/wholesale.css">
+    <link rel="stylesheet" href="./style/mobile_table.min.css">
+    <link rel="stylesheet" href="./style/wholesale.min.css">
+    <link rel="stylesheet" href="./style/upload.min.css">
 
 
 </head>
@@ -42,6 +43,9 @@ $user = htmlspecialchars($_SESSION['user']['username'] ?? 'Guest', ENT_QUOTES);
                 <?php if (in_array(($_SESSION['user']['role'] ?? ''), ['admin', 'owner'])): ?>
                     <a href="product_catalog.php" aria-label="Product Catalog">Product Catalog</a>
                     <a href="summary.php" aria-label="Summary">Summary</a>
+                <?php endif; ?>
+                <?php if (in_array(($_SESSION['user']['role'] ?? ''), ['owner'])): ?>
+                    <a href="user_list.php" aria-label="User List">User List</a>
                 <?php endif; ?>
                 <a href="#" aria-label="LogOut" id="logoutBtn">Log Out</a>
 
@@ -66,6 +70,7 @@ $user = htmlspecialchars($_SESSION['user']['username'] ?? 'Guest', ENT_QUOTES);
                     <button class="icon-btn" id="refreshBtn"><img src="./assets/refresh.svg" alt="Refresh"></button>
                     <?php if (in_array(($_SESSION['user']['role'] ?? ''), ['admin', 'owner'])): ?>
                         <button class="icon-btn" id="downloadCsv"><img src="./assets/download.svg" alt="Download"></button>
+                        <button class="icon-btn" id="uploadCsv"><img src="./assets/upload.svg" alt="Upload"></button>
                     <?php endif; ?>
 
                     <button class="icon-btn" id="searchBtn" type="button">
@@ -297,6 +302,7 @@ $user = htmlspecialchars($_SESSION['user']['username'] ?? 'Guest', ENT_QUOTES);
     <script src="./js/sales_overview.js"></script>
     <script src="./js/ws_sales_overview.js"></script>
     <script src="./js/download_csv.js"></script>
+    <script src="./js/upload.js"></script>
 
 
 

@@ -1,7 +1,14 @@
 <?php
 // api/ws_sales_minimal.php
 declare(strict_types=1);
+
+require __DIR__ . '/session_bootstrap.php';
+require __DIR__ . '/auth.php';
+
+auth_require_login(['admin', 'owner', 'staff']);
+
 header('Content-Type: application/json; charset=utf-8');
+header('X-Content-Type-Options: nosniff');
 
 // Buffer output so we can discard HTML warnings/notices and still return JSON.
 ob_start();

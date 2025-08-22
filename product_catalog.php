@@ -19,7 +19,7 @@ $user = htmlspecialchars($_SESSION['user']['username'] ?? 'Guest', ENT_QUOTES);
     <title>Eraverse • Product Catalog</title>
     <link rel="stylesheet" href="./style/style.min.css">
     <link rel="stylesheet" href="./style/product_catalog.min.css">
-    <link rel="stylesheet" href="./style/wholesale.css">
+    <link rel="stylesheet" href="./style/wholesale.min.css">
 </head>
 
 <body>
@@ -35,7 +35,11 @@ $user = htmlspecialchars($_SESSION['user']['username'] ?? 'Guest', ENT_QUOTES);
                     <a href="product_catalog.php" aria-label="Product Catalog">Product Catalog</a>
                     <a href="summary.php" aria-label="Summary">Summary</a>
                 <?php endif; ?>
+                <?php if (in_array(($_SESSION['user']['role'] ?? ''), ['owner'])): ?>
+                    <a href="user_list.php" aria-label="User List">User List</a>
+                <?php endif; ?>
                 <a href="#" aria-label="LogOut" id="logoutBtn">Log Out</a>
+
 
             </div>
 
@@ -59,9 +63,7 @@ $user = htmlspecialchars($_SESSION['user']['username'] ?? 'Guest', ENT_QUOTES);
                     <h2 id="product_catalog" class="era-table-title"><span class="btn-active" id="retail_page">Retail</span> <span class="btn-inactive" id="wholesale_page">Wholesale</span></h2>
 
                     <div class="btn-group">
-                        <button id="userSettingBtn" class="iconLabelBtn catalogPage"><img src="./assets/user.svg"
-                                alt="editUser">
-                            <span class="btnLabel">User Setting</span></button>
+
                         <button id="addProductBtn" class="iconLabelBtn catalogPage"><img src="./assets/add.svg" alt="">
                             <span class="btnLabel">Add Product</span></button>
                     </div>
@@ -69,60 +71,6 @@ $user = htmlspecialchars($_SESSION['user']['username'] ?? 'Guest', ENT_QUOTES);
             </section>
 
 
-            <section class="era-table-card mb" id="user_setting">
-
-                <div class="menu-bar">
-                    <h2 class="era-table-title">User Setting</h2>
-                </div>
-                <div id="addUserRow" class="input-form">
-                    <form>
-                        <div class="form-row">
-                            <div class="form-col">
-                                <label for="username" class="form-label">Username</label>
-                                <input type="text" id="username" placeholder="Username" autocomplete="off">
-                            </div>
-                            <div class="form-col">
-                                <label for="password" class="form-label">Password</label>
-                                <input type="password" id="password" placeholder="Passwrod" autocomplete="off">
-                            </div>
-                            <div class="form-col">
-                                <label for="role" class="form-label">Role</label>
-                                <select id="role">
-                                    <option disabled>Choose...</option>
-                                    <option selected>Staff</option>
-                                    <option>Admin</option>
-                                </select>
-                            </div>
-
-                            <div class="form-col form-submit">
-                                <label class="invisible">Save</label>
-                                <button type="submit" class="form-btn iconLabelBtn" style="width: 150px;">
-                                    <img src="./assets/addUser.svg" alt="">Add User
-                                </button>
-                            </div>
-                    </form>
-                    <div id="feedback_addUser" class="feedback_text"></div>
-                </div>
-                <div id="delUserRow" class="input-form mt">
-                    <form>
-                        <div class="form-row">
-                            <div class="form-col">
-                                <label for="user" class="form-label">User</label>
-                                <select id="user">
-                                    <option selected disabled>Choose...</option>
-                                </select>
-                            </div>
-
-                            <div class="form-col form-submit">
-                                <label class="invisible">Save</label>
-                                <button type="submit" class="form-btn iconLabelBtn" style="width: 160px;">
-                                    <img src="./assets/deleteUser.svg" alt="">Delete User
-                                </button>
-                            </div>
-                    </form>
-                    <div id="feedback_delUser" class="form-feedback" style="display:none"></div>
-                </div>
-            </section>
 
             <section class="era-table-card mb" id="addProductForm">
                 <div class="menu-bar">
@@ -304,7 +252,6 @@ $user = htmlspecialchars($_SESSION['user']['username'] ?? 'Guest', ENT_QUOTES);
     <script src="./js/nav.js"></script>
     <script src="./js/product_catalog_toggle.js"></script>
     <script src="./js/product_catalog.js"></script>
-    <script src="./js/about_user.js"></script>
 </body>
 
 </html>

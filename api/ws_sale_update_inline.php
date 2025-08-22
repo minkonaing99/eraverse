@@ -1,9 +1,16 @@
 <?php
 // api/ws_sale_update_inline.php
-header('Content-Type: application/json; charset=utf-8');
-header('Access-Control-Allow-Origin: *');
+declare(strict_types=1);
 
-require_once __DIR__ . '/dbinfo.php';
+require __DIR__ . '/session_bootstrap.php';
+require __DIR__ . '/auth.php';
+
+auth_require_login(['admin', 'owner', 'staff']);
+
+header('Content-Type: application/json; charset=utf-8');
+header('X-Content-Type-Options: nosniff');
+
+require __DIR__ . '/dbinfo.php';
 
 try {
     if (!isset($pdo) || !($pdo instanceof PDO)) {

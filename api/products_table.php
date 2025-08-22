@@ -1,8 +1,16 @@
 <?php
-header('Content-Type: application/json; charset=utf-8');
-header('Access-Control-Allow-Origin: *');
+// api/products_table.php
+declare(strict_types=1);
 
-require_once './dbinfo.php'; // your PDO connection
+require __DIR__ . '/session_bootstrap.php';
+require __DIR__ . '/auth.php';
+
+auth_require_login(['admin', 'owner', 'staff']);
+
+header('Content-Type: application/json; charset=utf-8');
+header('X-Content-Type-Options: nosniff');
+
+require __DIR__ . '/dbinfo.php';
 
 try {
     // Pull raw int plus a computed boolean for a painless shim
@@ -12,7 +20,6 @@ try {
             product_name,
             duration,
             renew AS renew_int,
-            (renew <> 0) AS renew_bool,
             supplier,
             wholesale,
             retail,

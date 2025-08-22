@@ -1,8 +1,14 @@
 <?php
 // api/sale_delete.php
+declare(strict_types=1);
+
+require __DIR__ . '/session_bootstrap.php';
+require __DIR__ . '/auth.php';
+
+auth_require_login(['admin', 'owner', 'staff']);
+
 header('Content-Type: application/json; charset=utf-8');
-header('Access-Control-Allow-Origin: *');
-header('Access-Control-Allow-Methods: POST'); // POST only
+header('X-Content-Type-Options: nosniff');
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405); // Method Not Allowed
@@ -11,7 +17,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     exit;
 }
 
-require_once __DIR__ . '/dbinfo.php'; // must provide $pdo (PDO)
+require __DIR__ . '/dbinfo.php';
 
 try {
     if (!isset($pdo) || !($pdo instanceof PDO)) {
