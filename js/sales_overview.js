@@ -270,10 +270,6 @@ document
     const tdProd = document.createElement("td");
     tdProd.textContent = s.sale_product ?? "-";
 
-    const tdDur = document.createElement("td");
-    tdDur.className = "era-dur column-hide";
-    tdDur.innerHTML = `<span class="era-badge">${s.duration ?? "-"}</span>`;
-
     const tdRenew = document.createElement("td");
     tdRenew.className = "era-renew";
     const renewInt = Number.isInteger(+s.renew) ? +s.renew : 0;
@@ -293,7 +289,11 @@ document
       return td;
     };
 
-    const tdCustomer = makeEditable("customer", s.customer);
+    const tdCustomer = makeEditable(
+      "customer",
+      s.customer,
+      "era-muted-customer"
+    );
     const tdEmail = makeEditable("email", s.email, "era-muted");
 
     const tdPurchased = document.createElement("td");
@@ -304,7 +304,11 @@ document
     tdExpired.className = "text-center";
     tdExpired.textContent = formatDate(s.expired_date);
 
-    const tdManager = makeEditable("manager", s.manager, "column-hide");
+    const tdManager = makeEditable(
+      "manager",
+      s.manager,
+      "era-muted column-hide"
+    );
     const tdNote = makeEditable("note", s.note, "era-muted column-hide");
 
     const tdPrice = document.createElement("td");
@@ -325,7 +329,6 @@ document
     tr.append(
       tdNum,
       tdProd,
-      tdDur,
       tdRenew,
       tdCustomer,
       tdEmail,
@@ -357,9 +360,9 @@ document
 
     // Add filler cells for the columns that are hidden on mobile
     // but visible on desktop BEFORE the Price column:
-    // Duration (idx 2), Manager (idx 8), Note (idx 9) → 3 fillers.
+    // Manager (idx 7), Note (idx 8) → 2 fillers.
     // Give them the same "column-hide" class so they disappear on narrow view.
-    for (let i = 0; i < 3; i++) {
+    for (let i = 0; i < 2; i++) {
       const tdFill = document.createElement("td");
       tdFill.className = "column-hide";
       tr.appendChild(tdFill);
@@ -805,7 +808,12 @@ document
   // ---------------- data ----------------
   async function fetchSalesFromNetwork() {
     const r = await fetch(API_LIST_URL, {
-      headers: { Accept: "application/json" },
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({}),
     });
     const json = await r.json().catch(() => ({}));
     if (!r.ok || !json.success)
@@ -816,7 +824,7 @@ document
   async function loadSales() {
     // Start loading with minimum 1 second display
     const loadingStartTime = Date.now();
-    const minLoadingTime = 1000; // 1 second minimum
+    const minLoadingTime = 300; // 1 second minimum
 
     // Show global loading overlay
     if (window.LoadingSystem) {
@@ -1078,8 +1086,12 @@ document
   async function loadProductOptions() {
     try {
       const r = await fetch(OPTIONS_URL, {
-        headers: { Accept: "application/json" },
         method: "POST",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({}),
       });
       const data = await r.json().catch(() => ({}));
       if (!elProduct) return;

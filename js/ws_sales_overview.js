@@ -279,10 +279,6 @@ document
     const tdProd = document.createElement("td");
     tdProd.textContent = s.sale_product ?? "-";
 
-    const tdDur = document.createElement("td");
-    tdDur.className = "era-dur column-hide";
-    tdDur.innerHTML = `<span class="era-badge">${s.duration ?? "-"}</span>`;
-
     const tdRenew = document.createElement("td");
     tdRenew.className = "era-renew column-hide";
     const renewInt = Number.isInteger(+s.renew) ? +s.renew : 0;
@@ -339,7 +335,6 @@ document
     tr.append(
       tdNum,
       tdProd,
-      tdDur,
       tdQty,
       tdRenew,
       tdCustomer,
@@ -372,9 +367,9 @@ document
 
     // Add filler cells for the columns that are hidden on mobile
     // but visible on desktop BEFORE the Price column:
-    // Duration (idx 2), Renew (idx 4), Manager (idx 9), Note (idx 10) → 4 fillers.
+    // Renew (idx 3), Manager (idx 8), Note (idx 9) → 3 fillers.
     // Give them the same "column-hide" class so they disappear on narrow view.
-    for (let i = 0; i < 4; i++) {
+    for (let i = 0; i < 3; i++) {
       const tdFill = document.createElement("td");
       tdFill.className = "column-hide";
       tr.appendChild(tdFill);
@@ -834,7 +829,12 @@ document
   // ---------------- data ----------------
   async function fetchSalesFromNetwork() {
     const r = await fetch(API_LIST_URL, {
-      headers: { Accept: "application/json" },
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({}),
     });
     const json = await r.json().catch(() => ({}));
     if (!r.ok || !json.success)
@@ -845,7 +845,7 @@ document
   async function loadSales() {
     // Start loading with minimum 1 second display
     const loadingStartTime = Date.now();
-    const minLoadingTime = 1000; // 1 second minimum
+    const minLoadingTime = 300; // 1 second minimum
 
     // Show global loading overlay
     if (window.LoadingSystem) {
@@ -1109,8 +1109,12 @@ document
   async function loadProductOptions() {
     try {
       const r = await fetch(OPTIONS_URL, {
-        headers: { Accept: "application/json" },
         method: "POST",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({}),
       });
       const data = await r.json().catch(() => ({}));
       if (!elProduct) return;

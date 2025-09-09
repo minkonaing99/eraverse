@@ -15,7 +15,12 @@ document
       const filename = isRetailActive ? "retail_sales" : "wholesale_sales";
 
       const resp = await fetch(apiUrl, {
-        headers: { Accept: "text/csv" },
+        method: "POST",
+        headers: {
+          Accept: "text/csv",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({}),
       });
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
       const blob = await resp.blob();

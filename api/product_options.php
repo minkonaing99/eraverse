@@ -2,6 +2,14 @@
 // api/fetch_product_options.php
 header('Content-Type: application/json; charset=utf-8');
 header('Access-Control-Allow-Origin: *');
+header('Access-Control-Allow-Methods: POST'); // POST only
+
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    http_response_code(405);
+    header('Allow: POST');
+    echo json_encode(['success' => false, 'error' => 'Method not allowed. Use POST.']);
+    exit;
+}
 
 require_once __DIR__ . '/dbinfo.php';
 

@@ -197,10 +197,12 @@ class UploadModal {
     let productCatalog = [];
     try {
       const response = await fetch("api/products_table.php", {
-        method: "GET",
+        method: "POST",
         headers: {
           Accept: "application/json",
+          "Content-Type": "application/json",
         },
+        body: JSON.stringify({}),
       });
 
       if (response.ok) {

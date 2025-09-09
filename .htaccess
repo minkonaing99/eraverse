@@ -1,0 +1,226 @@
+# ===========================================
+# SECURITY CONFIGURATIONS (Apache 2.4+)
+# ===========================================
+# Prevent access to sensitive files
+<IfModule mod_authz_core.c>
+  <FilesMatch "\.(htaccess|htpasswd|ini|log|sh|inc|bak|sql|conf|config)$">
+    Require all denied
+  </FilesMatch>
+
+  # Block access to internal helpers (ensure public endpoints live under /api)
+  <Files "dbinfo.php">
+    Require all denied
+  </Files>
+  <Files "session_bootstrap.php">
+    Require all denied
+  </Files>
+  # If auth.php is internal only, keep this. If it’s your login endpoint, move it to /api/auth.php and remove this.
+  <Files "auth.php">
+    Require all denied
+  </Files>
+
+  # Block hidden dotfiles but allow ACME challenge
+  <FilesMatch "^\.">
+    Require all denied
+  </FilesMatch>
+</IfModule>
+
+# No directory listing
+Options -Indexes
+
+# (ServerTokens/ServerSignature must be set in server/virtualhost config, not here)
+
+# ===========================================
+# CORS & PRE-FLIGHTS
+# ===========================================
+<IfModule mod_headers.c>
+  # CORS for PHP endpoints (no credentials)
+  <FilesMatch "\.php$">
+    Header always set Access-Control-Allow-Origin "*"
+    Header always set Access-Control-Allow-Methods "GET, POST, OPTIONS"
+    Header always set Access-Control-Allow-Headers "Content-Type, Authorization, X-Requested-With"
+    Header always set Access-Control-Max-Age "3600"
+  </FilesMatch>
+</IfModule>
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+
+  # Allow ACME challenge (Let’s Encrypt)
+  RewriteRule ^\.well-known/acme-challenge/ - [L]
+
+  # Handle CORS preflight cleanly
+  RewriteCond %{REQUEST_METHOD} =OPTIONS
+  RewriteRule ^ - [R=204,L]
+</IfModule>
+
+# ===========================================
+# CLEAN URLS
+# ===========================================
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+
+  # Force HTTPS (uncomment when SSL is ready)
+  # RewriteCond %{HTTPS} !=on
+  # RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+  # Remove .php extension (serve page.php when /page is requested)
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteRule ^([^\.]+)/?$ $1.php [NC,L]
+
+  # Redirect explicit .php to clean URL
+  RewriteCond %{THE_REQUEST} \s/([^.]+)\.php[\s?] [NC]
+  RewriteRule ^ %1 [L,R=301]
+
+  # Ensure trailing slash for real directories
+  RewriteCond %{REQUEST_FILENAME} -d
+  RewriteCond %{REQUEST_URI} !/$
+  RewriteRule ^ %{REQUEST_URI}/ [R=301,L]
+</IfModule>
+
+# ===========================================
+# CACHING & PERFORMANCE
+# ===========================================
+<IfModule mod_expires.c>
+  ExpiresActive On
+  ExpiresByType text/css "access plus 1 month"
+  ExpiresByType application/javascript "access plus 1 month"
+  ExpiresByType text/javascript "access plus 1 month"
+
+  ExpiresByType image/png "access plus 1 year"
+  ExpiresByType image/jpeg "access plus 1 year"
+  ExpiresByType image/jpg "access plus 1 year"
+  ExpiresByType image/gif "access plus 1 year"
+  ExpiresByType image/svg+xml "access plus 1 year"
+  ExpiresByType image/webp "access plus 1 year"
+
+  ExpiresByType font/woff2 "access plus 1 year"
+  ExpiresByType font/woff "access plus 1 year"
+
+  ExpiresByType text/html "access plus 1 hour"
+  ExpiresByType application/json "access plus 0 seconds"
+</IfModule>
+
+<IfModule mod_headers.c>
+  <FilesMatch "\.(css|js)$">
+    Header set Cache-Control "public, max-age=2592000"
+  </FilesMatch>
+  <FilesMatch "\.(png|jpe?g|gif|svg|webp)$">
+    Header set Cache-Control "public, max-age=31536000, immutable"
+  </FilesMatch>
+
+  # API JSON no-cache — match by REQUEST_URI instead of FilesMatch path
+  SetEnvIf Request_URI "^/api/.*\.php$" IS_API=1
+  Header set Cache-Control "no-cache, no-store, must-revalidate" env=IS_API
+  Header set Pragma "no-cache" env=IS_API
+  Header set Expires "0" env=IS_API
+</IfModule>
+
+# ===========================================
+# COMPRESSION
+# ===========================================
+<IfModule mod_deflate.c>
+  AddOutputFilterByType DEFLATE text/html text/plain text/css text/javascript application/javascript application/json application/xml application/xhtml+xml image/svg+xml font/woff font/woff2
+  # Workarounds for ancient browsers (optional)
+  BrowserMatch ^Mozilla/4 gzip-only-text/html
+  BrowserMatch ^Mozilla/4\.0[678] no-gzip
+  BrowserMatch \bMSIE !no-gzip !gzip-only-text/html
+  Header append Vary User-Agent
+</IfModule>
+
+# ===========================================
+# ERROR PAGES
+# ===========================================
+# ErrorDocument 404 /404.php
+# ErrorDocument 500 /500.php
+# ErrorDocument 403 /403.php
+
+# ===========================================
+# PHP (only if using mod_php; REMOVE if using PHP-FPM)
+# ===========================================
+<IfModule mod_php.c>
+  php_flag display_errors Off
+  php_flag log_errors On
+  php_value error_log /tmp/php_errors.log
+
+  php_value max_execution_time 30
+  php_value max_input_time 30
+  php_value memory_limit 256M
+  php_value post_max_size 16M
+  php_value upload_max_filesize 16M
+
+  php_value session.cookie_httponly 1
+  php_value session.cookie_secure 1
+  php_value session.use_only_cookies 1
+  php_value session.cookie_samesite "Lax"
+</IfModule>
+
+# ===========================================
+# MIME TYPES
+# ===========================================
+<IfModule mod_mime.c>
+  AddType font/woff woff
+  AddType font/woff2 woff2
+  AddType application/vnd.ms-fontobject eot
+  AddType font/truetype ttf
+  AddType font/opentype otf
+  AddType application/json json
+  AddType application/xml xml
+  AddType text/csv csv
+</IfModule>
+
+# ===========================================
+# SECURITY HEADERS
+# ===========================================
+<IfModule mod_headers.c>
+  Header always set X-Content-Type-Options "nosniff"
+  Header always set X-Frame-Options "DENY"
+  Header always set Referrer-Policy "strict-origin-when-cross-origin"
+  Header always set Permissions-Policy "geolocation=(), microphone=(), camera=()"
+  # CSP — customize domains as needed
+  # Example allowing self + CDNs + APIs:
+  # Header always set Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https:; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https://api.yourdomain.com;"
+
+  # X-XSS-Protection is deprecated; omit or keep for legacy:
+  Header always set X-XSS-Protection "0"
+</IfModule>
+
+# ===========================================
+# BLOCK MALICIOUS REQUESTS (use carefully)
+# ===========================================
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteCond %{QUERY_STRING} (<|%3C).*script.*(>|%3E) [NC,OR]
+  RewriteCond %{QUERY_STRING} GLOBALS(=|\[|\%[0-9A-Z]{0,2}) [OR]
+  RewriteCond %{QUERY_STRING} _REQUEST(=|\[|\%[0-9A-Z]{0,2}) [OR]
+  RewriteCond %{QUERY_STRING} proc/self/environ [OR]
+  RewriteCond %{QUERY_STRING} mosConfig_[a-zA-Z_]{1,21}(=|\%3D) [OR]
+  RewriteCond %{QUERY_STRING} base64_(en|de)code[^(]*\([^)]*\) [OR]
+  RewriteCond %{QUERY_STRING} (<|%3C)([^s]*s)+cript.*(>|%3E) [NC,OR]
+  RewriteCond %{QUERY_STRING} (\<|%3C).*iframe.*(\>|%3E) [NC]
+  RewriteRule ^ - [F,L]
+
+  # Block common WP paths
+  RewriteRule ^(wp-admin|wp-content|wp-includes) - [F,L]
+</IfModule>
+
+# ===========================================
+# MAINTENANCE MODE
+# ===========================================
+# <IfModule mod_rewrite.c>
+#   RewriteEngine On
+#   RewriteCond %{REQUEST_URI} !^/maintenance\.html$
+#   RewriteCond %{REMOTE_ADDR} !^127\.0\.0\.1$
+#   Header always set Retry-After "3600"
+#   RewriteRule ^ /maintenance.html [R=503,L]
+# </IfModule>
+
+# ===========================================
+# VCS DIRECTORIES
+# ===========================================
+<IfModule mod_authz_core.c>
+  <FilesMatch "^(?:\.git|\.svn|\.hg)$">
+    Require all denied
+  </FilesMatch>
+</IfModule>

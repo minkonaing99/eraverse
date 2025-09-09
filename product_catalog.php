@@ -230,7 +230,6 @@ $user = htmlspecialchars($_SESSION['user']['username'] ?? 'Guest', ENT_QUOTES);
                         <tr>
                             <th class="era-num">#</th>
                             <th class="era-product">Product</th>
-                            <th class="era-dur">Dur</th>
                             <th class="era-renew" style="text-align: center;">Renew</th>
                             <th class="era-supplier" style="text-align: center;">Supplier</th>
                             <th class="column-hide">Note</th>

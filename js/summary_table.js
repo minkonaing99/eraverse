@@ -347,7 +347,12 @@
 
     try {
       const res = await fetch(API_URL, {
-        headers: { Accept: "application/json" },
+        method: "POST",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({}),
       });
       const json = await res.json().catch(() => ({ success: false }));
 

@@ -330,7 +330,12 @@
     tbody.appendChild(placeholderRow("Loading…"));
     try {
       const r = await fetch(api.list, {
-        headers: { Accept: "application/json" },
+        method: "POST",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({}),
       });
       const json = await r.json().catch(() => ({}));
       if (!r.ok || !json.success)

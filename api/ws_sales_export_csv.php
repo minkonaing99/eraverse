@@ -2,12 +2,22 @@
 // api/ws_sales_export_csv.php
 declare(strict_types=1);
 
+header('Content-Type: text/csv; charset=utf-8');
+header('Access-Control-Allow-Origin: *');
+header('Access-Control-Allow-Methods: POST'); // POST only
+
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    http_response_code(405);
+    header('Allow: POST');
+    echo json_encode(['success' => false, 'error' => 'Method not allowed. Use POST.']);
+    exit;
+}
+
 require __DIR__ . '/session_bootstrap.php';
 require __DIR__ . '/auth.php';
 
 auth_require_login(['admin', 'owner']);
 
-header('Content-Type: text/csv; charset=utf-8');
 header('Content-Disposition: attachment; filename="wholesale_sales_' . date('Y-m-d') . '.csv"');
 header('X-Content-Type-Options: nosniff');
 

@@ -92,7 +92,14 @@
 
   // ---------- Data ----------
   async function fetchRows() {
-    const r = await fetch(API_URL, { headers: { Accept: "application/json" } });
+    const r = await fetch(API_URL, {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({}),
+    });
     // If server returned PHP error HTML, .json() will throw – surface it clearly
     const json = await r
       .json()

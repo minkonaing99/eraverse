@@ -68,7 +68,7 @@ $user = htmlspecialchars($_SESSION['user']['username'] ?? 'Guest', ENT_QUOTES);
 
                 <div class="btn-group">
                     <button class="icon-btn" id="refreshBtn"><img src="./assets/refresh.svg" alt="Refresh"></button>
-                    <?php if (in_array(($_SESSION['user']['role'] ?? ''), ['admin', 'owner'])): ?>
+                    <?php if (in_array(($_SESSION['user']['role'] ?? ''), ['owner'])): ?>
                         <button class="icon-btn" id="downloadCsv"><img src="./assets/download.svg" alt="Download"></button>
                         <button class="icon-btn" id="uploadCsv"><img src="./assets/upload.svg" alt="Upload"></button>
                     <?php endif; ?>
@@ -230,7 +230,6 @@ $user = htmlspecialchars($_SESSION['user']['username'] ?? 'Guest', ENT_QUOTES);
                         <tr>
                             <th class="era-num">#</th>
                             <th>Product</th>
-                            <th class="era-dur column-hide">Dur</th>
                             <th class="era-renew" style="text-align: center;">Renew</th>
                             <th>Customer</th>
                             <th class=" era-email">Email</th>
@@ -298,6 +297,7 @@ $user = htmlspecialchars($_SESSION['user']['username'] ?? 'Guest', ENT_QUOTES);
     </script>
     <script src="./js/loading.js"></script>
     <script src="./js/nav.js"></script>
+    <script src="./js/hotkeys.js"></script>
     <script src="./js/add_sales_toggle.js"></script>
     <script src="./js/sales_overview.js"></script>
     <script src="./js/ws_sales_overview.js"></script>

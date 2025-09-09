@@ -2,8 +2,19 @@
 // api/sales_export_csv.php
 declare(strict_types=1);
 
+header('Content-Type: text/csv; charset=utf-8');
+header('Access-Control-Allow-Origin: *');
+header('Access-Control-Allow-Methods: POST'); // POST only
+
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    http_response_code(405);
+    header('Allow: POST');
+    echo json_encode(['success' => false, 'error' => 'Method not allowed. Use POST.']);
+    exit;
+}
+
 // --- debug switch ---
-$debug = isset($_GET['debug']) && $_GET['debug'] !== '0';
+$debug = isset($_POST['debug']) && $_POST['debug'] !== '0';
 if ($debug) {
     ini_set('display_errors', '1');
     error_reporting(E_ALL);
