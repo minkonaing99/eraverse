@@ -11,6 +11,9 @@ function todayDate() {
   return `${y}-${m}-${day}`;
 }
 
+// Store last input date for sales form
+let lastInputDate = null;
+
 /* -----------------------------
    Add Sale section toggle + search UI
 ----------------------------- */
@@ -1169,13 +1172,22 @@ document
   }
 
   // Init
-  if (elPurchase && !elPurchase.value) elPurchase.value = todayDate();
+  if (elPurchase && !elPurchase.value) {
+    elPurchase.value = lastInputDate || todayDate();
+  }
   await loadProductOptions();
   validate();
 
   elProduct?.addEventListener("change", onProductChange);
   elCustomer?.addEventListener("input", validate);
   elPurchase?.addEventListener("change", onPurchaseDateChange);
+
+  // Track date changes to remember last input date
+  elPurchase?.addEventListener("change", (e) => {
+    if (e.target.value) {
+      lastInputDate = e.target.value;
+    }
+  });
 
   // Submit
   // Allowed renew integers for sales insert
@@ -1278,7 +1290,7 @@ document
       // Reset fields
       form.reset();
       if (elProduct) elProduct.selectedIndex = 0;
-      if (elPurchase) elPurchase.value = todayDate();
+      if (elPurchase) elPurchase.value = lastInputDate || todayDate();
       if (elEndDate) elEndDate.value = "";
       validate();
     } catch (err) {

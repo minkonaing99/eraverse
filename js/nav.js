@@ -13,12 +13,17 @@
     }
   }
 
-  // -> "sales_overview.html" | "product_catalog.html" | "index"
+  // -> "sales_overview" | "product_catalog" | "index"
   function pageKey(href) {
     const p = normalize(href);
     if (p === "/") return "index";
     const segs = p.split("/").filter(Boolean);
-    return segs.pop() || "index";
+    let pageName = segs.pop() || "index";
+
+    // Remove .php extension if present
+    pageName = pageName.replace(/\.php$/, "");
+
+    return pageName;
   }
 
   function setActiveNav() {
