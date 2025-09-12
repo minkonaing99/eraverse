@@ -113,6 +113,9 @@ document
   // --- search state ---
   let currentQuery = ""; // the text currently filtering
 
+  // --- month filter state ---
+  let currentMonth = null; // the selected month filter (1-12 or null for all)
+
   // ---------------- helpers ----------------
   const svgTrash = () =>
     `<span class="era-icon"><img src="./assets/delete.svg" alt=""></span>`;
@@ -287,7 +290,7 @@ document
     const tdQty = document.createElement("td");
     tdQty.className = "era-dur";
     const qtyInt = Number.isInteger(+s.quantity) ? +s.quantity : 1;
-    tdQty.innerHTML = `<span class="era-badge">${qtyInt}</span>`;
+    tdQty.innerHTML = `<span class="era-renew">${qtyInt}</span>`;
 
     const makeEditable = (field, text, extraClass = "") => {
       const td = document.createElement("td");
@@ -563,6 +566,23 @@ document
     );
   }
 
+  // ---------------- month filtering ----------------
+  function filterRowsByMonth(rows, month) {
+    if (!month) return rows; // No month filter
+
+    return rows.filter((r) => {
+      const purchasedDate = r.purchased_date;
+      if (!purchasedDate) return false;
+
+      // Extract month from YYYY-MM-DD format
+      const dateParts = purchasedDate.split("-");
+      if (dateParts.length !== 3) return false;
+
+      const rowMonth = parseInt(dateParts[1], 10);
+      return rowMonth === month;
+    });
+  }
+
   // ---------------- search (client-side, cached) ----------------
   function filterRowsByQuery(rows, q) {
     if (!q) return rows;
@@ -593,7 +613,7 @@ document
 
   function applySearchRender() {
     const input = document.getElementById("search_customer");
-    currentQuery = (input?.value || "").trim();
+    const newQuery = (input?.value || "").trim();
 
     // Check which page is currently active
     const retailBtn = document.getElementById("retail_page");
@@ -602,8 +622,34 @@ document
 
     // Only apply search to wholesale page
     if (!isRetailActive) {
-      // Re-render filtered list (starts at 100)
-      renderViewport(filterRowsByQuery(allRows, currentQuery));
+      // If starting a search (was empty, now has content), reload all data
+      if (!currentQuery && newQuery) {
+        currentQuery = newQuery;
+        // Clear cache and reload all data for searching
+        sessionStorage.removeItem(CACHE_KEY);
+        loadSales();
+        return;
+      }
+
+      // If clearing search (had content, now empty), reload month-filtered data
+      if (currentQuery && !newQuery) {
+        currentQuery = newQuery;
+        // Clear cache and reload month-filtered data
+        sessionStorage.removeItem(CACHE_KEY);
+        loadSales();
+        return;
+      }
+
+      // If continuing search (had content, still has content), just filter existing data
+      currentQuery = newQuery;
+
+      // Apply search filter to all data
+      let filteredRows = allRows;
+      if (currentQuery) {
+        filteredRows = filterRowsByQuery(filteredRows, currentQuery);
+      }
+
+      renderViewport(filteredRows);
 
       // Optional: reset scroll so the observer doesn't instantly fire
       const wrap = document.querySelector(".era-table-wrap");
@@ -631,16 +677,64 @@ document
       setTimeout(() => {
         if (!input.value) {
           currentQuery = "";
-          // Check which page is currently active
-          const retailBtn = document.getElementById("retail_page");
-          const isRetailActive =
-            retailBtn && retailBtn.classList.contains("btn-active");
-
-          if (!isRetailActive) {
-            renderViewport(allRows);
-          }
+          applySearchRender(); // Use the combined filter function
         }
       }, 140);
+    });
+  }
+
+  // ---------------- month filter setup ----------------
+  function setupMonthFilter() {
+    const monthSelect = document.getElementById("selectMonth");
+    if (!monthSelect) return;
+
+    // Clear existing options
+    monthSelect.innerHTML = "";
+
+    // Get current date info
+    const currentDate = new Date();
+    const currentYear = currentDate.getFullYear();
+    const currentMonthValue = currentDate.getMonth() + 1; // getMonth() returns 0-11
+
+    // Month names
+    const monthNames = [
+      "Jan",
+      "Feb",
+      "Mar",
+      "Apr",
+      "May",
+      "Jun",
+      "Jul",
+      "Aug",
+      "Sep",
+      "Oct",
+      "Nov",
+      "Dec",
+    ];
+
+    // Add months from current month backwards to January
+    for (let month = currentMonthValue; month >= 1; month--) {
+      const monthName = monthNames[month - 1];
+      const displayText = `${monthName} ${currentYear}`;
+
+      const option = document.createElement("option");
+      option.value = month;
+      option.textContent = displayText;
+      monthSelect.appendChild(option);
+    }
+
+    // Set current month as default
+    currentMonth = currentMonthValue;
+    monthSelect.value = currentMonthValue;
+
+    // Add event listener for month changes
+    monthSelect.addEventListener("change", (e) => {
+      const selectedMonth = e.target.value;
+      currentMonth = selectedMonth ? parseInt(selectedMonth, 10) : null;
+
+      // Clear cache and reload data for the new month
+      sessionStorage.removeItem(CACHE_KEY);
+      loadSales();
     });
   }
 
@@ -828,13 +922,21 @@ document
 
   // ---------------- data ----------------
   async function fetchSalesFromNetwork() {
+    const body = {};
+
+    // Add month filter to API request (only when not searching)
+    if (!currentQuery && currentMonth) {
+      body.month = currentMonth;
+    }
+    // When searching, don't send month parameter to search across all data
+
     const r = await fetch(API_LIST_URL, {
       method: "POST",
       headers: {
         Accept: "application/json",
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({}),
+      body: JSON.stringify(body),
     });
     const json = await r.json().catch(() => ({}));
     if (!r.ok || !json.success)
@@ -868,7 +970,16 @@ document
         const data = JSON.parse(cached);
         allRows = Array.isArray(data) ? data : [];
         allRows.forEach(buildSearchKey);
-        renderViewport(filterRowsByQuery(allRows, currentQuery));
+
+        // Apply month filter by default (unless searching)
+        let filteredRows = allRows;
+        if (!currentQuery && currentMonth) {
+          filteredRows = filterRowsByMonth(filteredRows, currentMonth);
+        } else if (currentQuery) {
+          // When searching, apply search filter to all data
+          filteredRows = filterRowsByQuery(filteredRows, currentQuery);
+        }
+        renderViewport(filteredRows);
 
         // background refresh
         fetchSalesFromNetwork()
@@ -876,7 +987,16 @@ document
             sessionStorage.setItem(CACHE_KEY, JSON.stringify(fresh));
             allRows = Array.isArray(fresh) ? fresh : [];
             allRows.forEach(buildSearchKey);
-            renderViewport(filterRowsByQuery(allRows, currentQuery));
+
+            // Apply month filter by default (unless searching)
+            let filteredRows = allRows;
+            if (!currentQuery && currentMonth) {
+              filteredRows = filterRowsByMonth(filteredRows, currentMonth);
+            } else if (currentQuery) {
+              // When searching, apply search filter to all data
+              filteredRows = filterRowsByQuery(filteredRows, currentQuery);
+            }
+            renderViewport(filteredRows);
           })
           .catch(() => {});
 
@@ -906,7 +1026,16 @@ document
       sessionStorage.setItem(CACHE_KEY, JSON.stringify(fresh));
       allRows = Array.isArray(fresh) ? fresh : [];
       allRows.forEach(buildSearchKey);
-      renderViewport(filterRowsByQuery(allRows, currentQuery));
+
+      // Apply month filter by default (unless searching)
+      let filteredRows = allRows;
+      if (!currentQuery && currentMonth) {
+        filteredRows = filterRowsByMonth(filteredRows, currentMonth);
+      } else if (currentQuery) {
+        // When searching, apply search filter to all data
+        filteredRows = filterRowsByQuery(filteredRows, currentQuery);
+      }
+      renderViewport(filteredRows);
 
       // Ensure minimum loading time for fresh data
       const elapsed = Date.now() - loadingStartTime;
@@ -1033,6 +1162,7 @@ document
   }
 
   setupCustomerSearch(); // debounced search
+  setupMonthFilter(); // month filtering
   initInlineEditing(); // applies to table only
   window.refreshWsSalesTable = refreshCacheAndReload;
 })();

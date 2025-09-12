@@ -32,16 +32,30 @@ try {
     // Get pagination parameters from request
     $input = json_decode(file_get_contents('php://input'), true) ?? [];
     $page = isset($input['page']) ? max(1, (int)$input['page']) : 1;
-    $limit = isset($input['limit']) ? min(3000, max(1, (int)$input['limit'])) : 3000;
-    $offset = ($page - 1) * $limit;
+    // No limit needed since we're filtering by month
+    $limit = null;
+    $offset = 0;
+    $month = isset($input['month']) ? (int) $input['month'] : null; // Month filter (1-12)
 
-    // Get total count for pagination
-    $countStmt = $pdo->query("SELECT COUNT(*) as total FROM ws_sale_overview");
+    // Build WHERE clause for month filtering
+    $whereClause = "";
+    $params = [];
+    if ($month && $month >= 1 && $month <= 12) {
+        $whereClause = "WHERE MONTH(purchased_date) = :month";
+        $params[':month'] = $month;
+    }
+
+    // Get total count
+    $countSql = "SELECT COUNT(*) as total FROM ws_sale_overview " . $whereClause;
+    $countStmt = $pdo->prepare($countSql);
+    foreach ($params as $key => $value) {
+        $countStmt->bindValue($key, $value, PDO::PARAM_INT);
+    }
+    $countStmt->execute();
     $totalRecords = (int)$countStmt->fetch()['total'];
-    $totalPages = (int)ceil($totalRecords / $limit);
 
-    // Get paginated data
-    $stmt = $pdo->prepare("
+    // Get all data for the month
+    $sql = "
         SELECT
             sale_id,
             sale_product,
@@ -57,11 +71,16 @@ try {
             price,
             profit
         FROM ws_sale_overview
+        " . $whereClause . "
         ORDER BY purchased_date DESC, sale_id DESC
-        LIMIT :limit OFFSET :offset
-    ");
-    $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
-    $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
+    ";
+    $stmt = $pdo->prepare($sql);
+
+    // Bind month parameter if present
+    foreach ($params as $key => $value) {
+        $stmt->bindValue($key, $value, PDO::PARAM_INT);
+    }
+
     $stmt->execute();
     $rows = $stmt->fetchAll();
 
@@ -90,15 +109,7 @@ try {
         [
             'success' => true,
             'data' => $rows,
-            'pagination' => [
-                'current_page' => $page,
-                'total_pages' => $totalPages,
-                'total_records' => $totalRecords,
-                'per_page' => $limit,
-                'has_more' => $page < $totalPages,
-                'next_page' => $page < $totalPages ? $page + 1 : null,
-                'prev_page' => $page > 1 ? $page - 1 : null
-            ]
+            'total_records' => $totalRecords,
         ],
         JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRESERVE_ZERO_FRACTION
     );
