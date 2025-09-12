@@ -82,10 +82,17 @@ document
 
   const COLSPAN = 12;
   const CACHE_KEY = "cachedSales:v1";
-  const PAGE_SIZE = 100;
+  const PAGE_SIZE = 250;
 
   // --- data cache ---
   let allRows = []; // master dataset (from API / cache)
+
+  // --- pagination state ---
+  let currentApiPage = 1;
+  let totalApiPages = 1;
+  let totalRecords = 0;
+  let isLoadingMore = false;
+  let hasMoreData = true;
 
   // --- TABLE state ---
   let flatRowsTable = [];
@@ -106,6 +113,27 @@ document
 
   // --- search state ---
   let currentQuery = ""; // the text currently filtering
+
+  // ---------------- cache management ----------------
+  function safeStoreCache(data) {
+    try {
+      // Server already limits to 5000 rows, so this should be safe
+      sessionStorage.setItem(CACHE_KEY, JSON.stringify(data));
+      return true;
+    } catch (error) {
+      console.warn("Failed to store cache:", error);
+      // Try to clear old cache and retry
+      try {
+        sessionStorage.removeItem(CACHE_KEY);
+        console.log("Cleared old cache, retrying...");
+        sessionStorage.setItem(CACHE_KEY, JSON.stringify(data));
+        return true;
+      } catch (retryError) {
+        console.error("Failed to store cache even after clearing:", retryError);
+        return false;
+      }
+    }
+  }
 
   // ---------------- helpers ----------------
   const svgTrash = () =>
@@ -245,7 +273,7 @@ document
       return r;
     });
 
-    // update session cache
+    // update session cache safely
     const cached = sessionStorage.getItem(CACHE_KEY);
     if (cached) {
       try {
@@ -254,9 +282,11 @@ document
         if (idx >= 0) {
           data[idx] = { ...data[idx], ...patch };
           if (touchesSearch) buildSearchKey(data[idx]);
-          sessionStorage.setItem(CACHE_KEY, JSON.stringify(data));
+          safeStoreCache(data);
         }
-      } catch {}
+      } catch (error) {
+        console.warn("Failed to update cache:", error);
+      }
     }
   }
 
@@ -683,8 +713,23 @@ document
 
     if (ioTable) ioTable.disconnect();
     ioTable = new IntersectionObserver(
-      (entries) =>
-        entries.forEach((e) => e.isIntersecting && appendNextChunkTable()),
+      (entries) => {
+        entries.forEach((e) => {
+          if (e.isIntersecting) {
+            if (renderedCountTable < flatRowsTable.length) {
+              // Load more chunks from current data
+              appendNextChunkTable();
+            } else if (
+              renderedCountTable >= flatRowsTable.length &&
+              hasMoreData &&
+              !isLoadingMore
+            ) {
+              // Show Load More button when reaching the end
+              addLoadMoreButton();
+            }
+          }
+        });
+      },
       { root: null, rootMargin: "0px 0px 200px 0px", threshold: 0 }
     );
     ioTable.observe(sentinel);
@@ -784,8 +829,23 @@ document
 
     if (ioCards) ioCards.disconnect();
     ioCards = new IntersectionObserver(
-      (entries) =>
-        entries.forEach((e) => e.isIntersecting && appendNextChunkCards()),
+      (entries) => {
+        entries.forEach((e) => {
+          if (e.isIntersecting) {
+            if (renderedCountCards < flatRowsCards.length) {
+              // Load more chunks from current data
+              appendNextChunkCards();
+            } else if (
+              renderedCountCards >= flatRowsCards.length &&
+              hasMoreData &&
+              !isLoadingMore
+            ) {
+              // Show Load More button when reaching the end
+              addLoadMoreButton();
+            }
+          }
+        });
+      },
       { root: null, rootMargin: "0px 0px 200px 0px", threshold: 0 }
     );
     ioCards.observe(sentinel);
@@ -809,25 +869,48 @@ document
   }
 
   // ---------------- data ----------------
-  async function fetchSalesFromNetwork() {
+  async function fetchSalesFromNetwork(page = 1, append = false) {
+    const body = {
+      page: page,
+      limit: 3000,
+    };
+
+    console.log(`Fetching page ${page} with limit ${body.limit}`);
+
     const r = await fetch(API_LIST_URL, {
       method: "POST",
       headers: {
         Accept: "application/json",
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({}),
+      body: JSON.stringify(body),
     });
     const json = await r.json().catch(() => ({}));
     if (!r.ok || !json.success)
       throw new Error(json.error || `HTTP ${r.status}`);
-    return json.data || [];
+
+    console.log(`API Response for page ${page}:`, {
+      dataLength: json.data ? json.data.length : 0,
+      pagination: json.pagination,
+    });
+
+    // Update pagination state
+    if (json.pagination) {
+      currentApiPage = json.pagination.current_page || page;
+      totalApiPages = json.pagination.total_pages || 1;
+      totalRecords = json.pagination.total_records || 0;
+      hasMoreData = json.pagination.has_more || false;
+    }
+
+    return {
+      data: json.data || [],
+      pagination: json.pagination || {},
+    };
   }
 
   async function loadSales() {
-    // Start loading with minimum 1 second display
     const loadingStartTime = Date.now();
-    const minLoadingTime = 300; // 1 second minimum
+    const minLoadingTime = 300; // .3 second minimum
 
     // Show global loading overlay
     if (window.LoadingSystem) {
@@ -853,12 +936,26 @@ document
         renderViewport(filterRowsByQuery(allRows, currentQuery));
 
         // background refresh
-        fetchSalesFromNetwork()
-          .then((fresh) => {
-            sessionStorage.setItem(CACHE_KEY, JSON.stringify(fresh));
+        fetchSalesFromNetwork(1, false)
+          .then((result) => {
+            const fresh = result.data;
+            const pagination = result.pagination;
+
+            // Update pagination state from background refresh
+            if (pagination) {
+              currentApiPage = pagination.current_page || 1;
+              totalApiPages = pagination.total_pages || 1;
+              totalRecords = pagination.total_records || 0;
+              hasMoreData = pagination.has_more || false;
+            }
+
+            safeStoreCache(fresh);
             allRows = Array.isArray(fresh) ? fresh : [];
             allRows.forEach(buildSearchKey);
             renderViewport(filterRowsByQuery(allRows, currentQuery));
+
+            // Update Load More button after background refresh
+            setTimeout(addLoadMoreButton, 100);
           })
           .catch(() => {});
 
@@ -884,8 +981,19 @@ document
     }
 
     try {
-      const fresh = await fetchSalesFromNetwork();
-      sessionStorage.setItem(CACHE_KEY, JSON.stringify(fresh));
+      const result = await fetchSalesFromNetwork(1, false);
+      const fresh = result.data;
+      const pagination = result.pagination;
+
+      // Update pagination state from initial load
+      if (pagination) {
+        currentApiPage = pagination.current_page || 1;
+        totalApiPages = pagination.total_pages || 1;
+        totalRecords = pagination.total_records || 0;
+        hasMoreData = pagination.has_more || false;
+      }
+
+      safeStoreCache(fresh);
       allRows = Array.isArray(fresh) ? fresh : [];
       allRows.forEach(buildSearchKey);
       renderViewport(filterRowsByQuery(allRows, currentQuery));
@@ -927,6 +1035,134 @@ document
   function refreshCacheAndReload() {
     sessionStorage.removeItem(CACHE_KEY);
     return loadSales();
+  }
+
+  /**
+   * Load more data from API (pagination)
+   */
+  async function loadMoreData() {
+    if (isLoadingMore || !hasMoreData) return;
+
+    isLoadingMore = true;
+    const nextPage = currentApiPage + 1;
+
+    try {
+      console.log(
+        `Loading page ${nextPage}, current data: ${allRows.length} records`
+      );
+
+      const result = await fetchSalesFromNetwork(nextPage, true);
+      const newData = result.data;
+      const pagination = result.pagination;
+
+      console.log(`API returned ${newData ? newData.length : 0} new records`);
+      console.log("Pagination info:", pagination);
+
+      if (newData && newData.length > 0) {
+        // Append new data to existing data
+        allRows = [...allRows, ...newData];
+        allRows.forEach(buildSearchKey);
+
+        // Update pagination state
+        if (pagination) {
+          currentApiPage = pagination.current_page || nextPage;
+          totalApiPages = pagination.total_pages || 1;
+          totalRecords = pagination.total_records || 0;
+          hasMoreData = pagination.has_more || false;
+        }
+
+        // Update cache
+        safeStoreCache(allRows);
+
+        // Re-render with new data
+        renderViewport(filterRowsByQuery(allRows, currentQuery));
+
+        // Update the Load More button
+        setTimeout(addLoadMoreButton, 100);
+      } else {
+        hasMoreData = false;
+        // Remove button if no more data
+        const existingBtn = document.getElementById("loadMoreBtn");
+        if (existingBtn) {
+          existingBtn.remove();
+        }
+      }
+    } catch (error) {
+      console.error("Failed to load more data:", error);
+      // Show error message to user
+      alert(`Failed to load more data: ${error.message}`);
+    } finally {
+      isLoadingMore = false;
+    }
+  }
+
+  /**
+   * Add Load More button when needed
+   */
+  function addLoadMoreButton() {
+    // Remove existing button if any
+    const existingBtn = document.getElementById("loadMoreBtn");
+    if (existingBtn) {
+      existingBtn.remove();
+    }
+
+    // Show button if we have more data and are not currently loading
+    if (hasMoreData && !isLoadingMore) {
+      console.log(
+        `Adding Load More button: hasMoreData=${hasMoreData}, isLoadingMore=${isLoadingMore}, currentPage=${currentApiPage}, totalPages=${totalApiPages}`
+      );
+
+      const btn = document.createElement("button");
+      btn.id = "loadMoreBtn";
+      btn.type = "button"; // Prevent form submission
+      btn.className = "iconLabelBtn";
+      btn.innerHTML = `<span class="btnLabel">Load More (${allRows.length} of ${totalRecords} records)</span>`;
+      btn.style.cssText = `
+        display: block;
+        width: 100%;
+        max-width: 400px;
+        margin: 20px auto;
+      `;
+
+      btn.addEventListener("click", (e) => {
+        e.preventDefault(); // Prevent default button behavior
+        e.stopPropagation(); // Stop event bubbling
+        e.stopImmediatePropagation(); // Stop all event handlers
+
+        console.log("Load More button clicked");
+
+        if (hasMoreData && !isLoadingMore) {
+          btn.innerHTML = `<span class="btnLabel">Loading...</span>`;
+          btn.disabled = true;
+          loadMoreData().finally(() => {
+            btn.disabled = false;
+            if (hasMoreData) {
+              btn.innerHTML = `<span class="btnLabel">Load More (${allRows.length} of ${totalRecords} records)</span>`;
+            } else {
+              btn.remove();
+            }
+          });
+
+          // Scroll to top of the page
+          window.scrollTo({
+            top: 0,
+            behavior: "smooth",
+          });
+        }
+
+        return false; // Additional prevention
+      });
+
+      // Insert button outside the table sections, after the scroll sentinel
+      const scrollSentinel = document.getElementById("scrollSentinel");
+      if (scrollSentinel) {
+        scrollSentinel.parentNode.insertBefore(btn, scrollSentinel.nextSibling);
+      }
+    } else {
+      console.log(
+        `Not adding Load More button: hasMoreData=${hasMoreData}, isLoadingMore=${isLoadingMore}`
+      );
+    }
   }
 
   // ---------------- delete (delegated) ----------------
@@ -1017,6 +1253,16 @@ document
   setupCustomerSearch(); // debounced search
   initInlineEditing(); // applies to table only
   window.refreshSalesTable = refreshCacheAndReload;
+
+  // Add Load More button after initial load
+  setTimeout(() => {
+    console.log(
+      `Initial load complete: hasMoreData=${hasMoreData}, allRows.length=${allRows.length}, totalRecords=${totalRecords}`
+    );
+    if (hasMoreData) {
+      addLoadMoreButton();
+    }
+  }, 1000);
 })();
 
 /* -----------------------------

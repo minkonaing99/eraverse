@@ -29,24 +29,19 @@ try {
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
     $pdo->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
 
-    $sql = "SELECT 
-                sale_id,
-                sale_product,
-                duration,
-                quantity,
-                renew,
-                customer,
-                email,
-                purchased_date,
-                expired_date,
-                manager,
-                note,
-                price,
-                profit
-            FROM ws_sale_overview 
-            ORDER BY purchased_date DESC, sale_id DESC";
+    // Get pagination parameters from request
+    $input = json_decode(file_get_contents('php://input'), true) ?? [];
+    $page = isset($input['page']) ? max(1, (int)$input['page']) : 1;
+    $limit = isset($input['limit']) ? min(3000, max(1, (int)$input['limit'])) : 3000;
+    $offset = ($page - 1) * $limit;
 
-    $stmt = $pdo->query("
+    // Get total count for pagination
+    $countStmt = $pdo->query("SELECT COUNT(*) as total FROM ws_sale_overview");
+    $totalRecords = (int)$countStmt->fetch()['total'];
+    $totalPages = (int)ceil($totalRecords / $limit);
+
+    // Get paginated data
+    $stmt = $pdo->prepare("
         SELECT
             sale_id,
             sale_product,
@@ -63,7 +58,11 @@ try {
             profit
         FROM ws_sale_overview
         ORDER BY purchased_date DESC, sale_id DESC
+        LIMIT :limit OFFSET :offset
     ");
+    $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+    $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
+    $stmt->execute();
     $rows = $stmt->fetchAll();
 
     // Normalize types (renew is INT now, not boolean)
@@ -88,7 +87,19 @@ try {
     unset($r);
 
     echo json_encode(
-        ['success' => true, 'data' => $rows],
+        [
+            'success' => true,
+            'data' => $rows,
+            'pagination' => [
+                'current_page' => $page,
+                'total_pages' => $totalPages,
+                'total_records' => $totalRecords,
+                'per_page' => $limit,
+                'has_more' => $page < $totalPages,
+                'next_page' => $page < $totalPages ? $page + 1 : null,
+                'prev_page' => $page > 1 ? $page - 1 : null
+            ]
+        ],
         JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRESERVE_ZERO_FRACTION
     );
 } catch (Throwable $e) {

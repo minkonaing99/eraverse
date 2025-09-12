@@ -281,7 +281,7 @@ $user = htmlspecialchars($_SESSION['user']['username'] ?? 'Guest', ENT_QUOTES);
 
 
 
-        <div id="scrollSentinel" aria-hidden="true" style="height:1px;"></div>
+        <div id="scrollSentinel" aria-hidden="true" style="height:1px; background: transparent; margin: 0; visibility: hidden;"></div>
 
 
     </main>
