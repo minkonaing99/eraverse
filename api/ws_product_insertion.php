@@ -34,7 +34,7 @@ try {
     // Helpers
     $MAX_VARCHAR = 255;
     $MAX_URL_LEN = 2083;
-    $ALLOWED_RENEW = [0, 1, 2, 3, 4, 5, 12];
+    $ALLOWED_RENEW = [0, 1, 2, 3, 4, 5, 6, 12];
 
     $trimOrNull = function ($v) {
         if ($v === null) return null;

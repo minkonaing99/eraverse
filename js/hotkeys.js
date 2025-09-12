@@ -226,7 +226,6 @@
   function init() {
     // Add event listener for keydown events
     document.addEventListener("keydown", handleKeydown, true);
-    console.log("Hotkeys event listener attached");
 
     // Disable hotkeys when form elements are focused
     document.addEventListener("focusin", (event) => {
@@ -254,8 +253,6 @@
 
     // Add visual indicator for hotkeys (optional)
     addHotkeyIndicator();
-
-    console.log("Hotkeys system initialized");
   }
 
   // Public API

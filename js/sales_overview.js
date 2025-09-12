@@ -125,16 +125,12 @@ document
       const limitedData = data.slice(0, maxCacheSize);
 
       sessionStorage.setItem(CACHE_KEY, JSON.stringify(limitedData));
-      console.log(
-        `Cached ${limitedData.length} records (limited from ${data.length})`
-      );
       return true;
     } catch (error) {
       console.warn("Failed to store cache:", error);
       // Try to clear old cache and retry
       try {
         sessionStorage.removeItem(CACHE_KEY);
-        console.log("Cleared old cache, retrying...");
         const maxCacheSize = 5000;
         const limitedData = data.slice(0, maxCacheSize);
         sessionStorage.setItem(CACHE_KEY, JSON.stringify(limitedData));
@@ -621,7 +617,6 @@ document
   function cleanupMemory() {
     // Clear large arrays when not needed
     if (allRows.length > 10000) {
-      console.log("Cleaning up memory: reducing allRows from", allRows.length);
       allRows = allRows.slice(0, 5000); // Keep only first 5000 records
     }
 
@@ -1011,8 +1006,6 @@ document
     }
     // When searching, don't send month parameter to search across all data
 
-    console.log(`Fetching page ${page} with limit ${body.limit}`);
-
     const r = await fetch(API_LIST_URL, {
       method: "POST",
       headers: {
@@ -1024,11 +1017,6 @@ document
     const json = await r.json().catch(() => ({}));
     if (!r.ok || !json.success)
       throw new Error(json.error || `HTTP ${r.status}`);
-
-    console.log(`API Response for page ${page}:`, {
-      dataLength: json.data ? json.data.length : 0,
-      pagination: json.pagination,
-    });
 
     // Update pagination state
     if (json.pagination) {
@@ -1210,16 +1198,9 @@ document
     const nextPage = currentApiPage + 1;
 
     try {
-      console.log(
-        `Loading page ${nextPage}, current data: ${allRows.length} records`
-      );
-
       const result = await fetchSalesFromNetwork(nextPage, true);
       const newData = result.data;
       const pagination = result.pagination;
-
-      console.log(`API returned ${newData ? newData.length : 0} new records`);
-      console.log("Pagination info:", pagination);
 
       if (newData && newData.length > 0) {
         // Append new data to existing data
@@ -1278,10 +1259,6 @@ document
 
     // Show button if we have more data and are not currently loading
     if (hasMoreData && !isLoadingMore) {
-      console.log(
-        `Adding Load More button: hasMoreData=${hasMoreData}, isLoadingMore=${isLoadingMore}, currentPage=${currentApiPage}, totalPages=${totalApiPages}`
-      );
-
       const btn = document.createElement("button");
       btn.id = "loadMoreBtn";
       btn.type = "button"; // Prevent form submission
@@ -1298,8 +1275,6 @@ document
         e.preventDefault(); // Prevent default button behavior
         e.stopPropagation(); // Stop event bubbling
         e.stopImmediatePropagation(); // Stop all event handlers
-
-        console.log("Load More button clicked");
 
         if (hasMoreData && !isLoadingMore) {
           btn.innerHTML = `<span class="btnLabel">Loading...</span>`;
@@ -1329,9 +1304,6 @@ document
         scrollSentinel.parentNode.insertBefore(btn, scrollSentinel.nextSibling);
       }
     } else {
-      console.log(
-        `Not adding Load More button: hasMoreData=${hasMoreData}, isLoadingMore=${isLoadingMore}`
-      );
     }
   }
 
@@ -1428,16 +1400,12 @@ document
   // Periodic memory cleanup every 30 seconds
   setInterval(() => {
     if (allRows.length > 5000) {
-      console.log("Periodic memory cleanup triggered");
       cleanupMemory();
     }
   }, 30000);
 
   // Add Load More button after initial load
   setTimeout(() => {
-    console.log(
-      `Initial load complete: hasMoreData=${hasMoreData}, allRows.length=${allRows.length}, totalRecords=${totalRecords}`
-    );
     if (hasMoreData) {
       addLoadMoreButton();
     }
