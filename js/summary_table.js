@@ -2,7 +2,7 @@
   "use strict";
 
   // ------------------------------ Config ------------------------------
-  const API_URL = "api/sales_minimal.php";
+  const API_URL = "api/sales_summary_table.php";
 
   // ------------------------------ Date utils (UTC-only) ------------------------------
   const msPerDay = 86_400_000;

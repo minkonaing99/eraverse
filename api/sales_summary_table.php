@@ -33,7 +33,8 @@ try {
     }
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
-    $forty_days_ago = date('Y-m-d', strtotime('-40 days'));
+    $today = date('Y-m-d');
+    $one_month_from_now = date('Y-m-d', strtotime('+1 month'));
 
     $stmt = $pdo->prepare("
         SELECT
@@ -49,7 +50,10 @@ try {
             duration,
             'retail' as sale_type
         FROM sale_overview
-        WHERE purchased_date >= ?
+        WHERE (
+            expired_date IS NOT NULL AND expired_date <= ?
+            OR renew != 0
+        )
         
         UNION ALL
         
@@ -66,12 +70,15 @@ try {
             duration,
             'wholesale' as sale_type
         FROM ws_sale_overview
-        WHERE purchased_date >= ?
+        WHERE (
+            expired_date IS NOT NULL AND expired_date <= ?
+            OR renew != 0
+        )
         
         ORDER BY purchased_date DESC, sale_id DESC
     ");
 
-    $stmt->execute([$forty_days_ago, $forty_days_ago]);
+    $stmt->execute([$one_month_from_now, $one_month_from_now]);
 
     $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
@@ -85,8 +92,11 @@ try {
         $r['expired_date']   = $r['expired_date']          ?? null;
         $r['customer']       = $r['customer']              ?? null;
         $r['email']          = $r['email']                 ?? null;
+
         $r['renew']          = isset($r['renew'])          ? (int)$r['renew']          : 0;
+
         $r['duration']       = isset($r['duration'])       ? (int)$r['duration']       : null;
+
         $r['sale_type']      = $r['sale_type']             ?? 'retail';
     }
     unset($r);
@@ -99,7 +109,7 @@ try {
 } catch (Throwable $e) {
     ob_end_clean();
     http_response_code(500);
-    error_log('sales_minimal.php error: ' . $e->getMessage());
+    error_log('sales_summary_table.php error: ' . $e->getMessage());
     echo json_encode(
         ['success' => false, 'error' => $e->getMessage()],
         JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES

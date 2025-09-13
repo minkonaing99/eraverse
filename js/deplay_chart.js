@@ -106,7 +106,9 @@
       .catch(() => ({ success: false, error: "Invalid JSON" }));
     if (!r.ok || !json.success)
       throw new Error(json.error || `HTTP ${r.status}`);
-    return Array.isArray(json.data) ? json.data : [];
+
+    const rows = Array.isArray(json.data) ? json.data : [];
+    return rows;
   }
 
   // ---------- KPIs ----------
