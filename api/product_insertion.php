@@ -1,8 +1,7 @@
 <?php
-// api/product_insertion.php
 header('Content-Type: application/json; charset=utf-8');
 header('Access-Control-Allow-Origin: *');
-header('Access-Control-Allow-Methods: POST'); // POST only
+header('Access-Control-Allow-Methods: POST');
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);
@@ -24,17 +23,15 @@ try {
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
     $pdo->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
 
-    // Read JSON body
     $raw = file_get_contents('php://input');
     $data = json_decode($raw, true);
     if (!is_array($data)) {
         throw new InvalidArgumentException('Invalid JSON payload.');
     }
 
-    // Helpers
     $MAX_VARCHAR = 255;
     $MAX_URL_LEN = 2083;
-    $ALLOWED_RENEW = [0, 1, 2, 3, 4, 5, 12];
+    $ALLOWED_RENEW = [0, 1, 2, 3, 4, 5, 6, 12];
 
     $trimOrNull = function ($v) {
         if ($v === null) return null;
@@ -49,15 +46,13 @@ try {
     $toDecimalString = function ($v) {
         if ($v === '' || $v === null || $v === false) return null;
         if (!is_numeric($v)) return null;
-        return number_format((float)$v, 2, '.', ''); // DECIMAL(10,2) safe string
+        return number_format((float)$v, 2, '.', '');
     };
 
 
-    // Extract & normalize
     $product_name = $trimOrNull($data['product_name'] ?? null);
     $duration     = $toInt($data['duration'] ?? null);
 
-    // renew: numbers only (0,1,2,3,4,5,12). Default to 0 if missing/empty.
     $renewRaw = $data['renew'] ?? null;
     $renew    = ($renewRaw === '' || $renewRaw === null) ? 0 : $toInt($renewRaw);
 
@@ -67,7 +62,6 @@ try {
     $note         = $trimOrNull($data['note'] ?? null);
     $link         = $trimOrNull($data['link'] ?? null);
 
-    // Make link forgiving
     if ($link !== null) {
         if (!preg_match('~^https?://~i', $link)) {
             $link = 'https://' . $link;
@@ -75,7 +69,6 @@ try {
         $link = preg_replace('/\s+/', '%20', $link);
     }
 
-    // Validate
     $errors = [];
     if (!$product_name) {
         $errors['product_name'] = 'Product name is required.';
@@ -113,7 +106,6 @@ try {
         exit;
     }
 
-    // Insert
     $sql = "
         INSERT INTO products_catalog
             (product_name, duration, renew, supplier, wholesale, retail, note, link)
@@ -124,7 +116,7 @@ try {
     $stmt->execute([
         ':product_name' => $product_name,
         ':duration'     => $duration,
-        ':renew'        => $renew, // integer only
+        ':renew'        => $renew,
         ':supplier'     => $supplier,
         ':wholesale'    => $wholesaleStr,
         ':retail'       => $retailStr,

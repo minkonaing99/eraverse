@@ -405,5 +405,4 @@
   window.addEventListener("unhandledrejection", handleUnhandledRejection);
 
   // ====== INITIALIZATION ======
-  console.log("Loading System initialized successfully");
 })();

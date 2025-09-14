@@ -32,16 +32,35 @@ try {
     // Get pagination parameters from request
     $input = json_decode(file_get_contents('php://input'), true) ?? [];
     $page = isset($input['page']) ? max(1, (int)$input['page']) : 1;
-    $limit = isset($input['limit']) ? min(3000, max(1, (int)$input['limit'])) : 3000;
-    $offset = ($page - 1) * $limit;
+    $limit = null;
+    $offset = 0;
+    $month = isset($input['month']) ? (int) $input['month'] : null; // Month filter (1-12)
 
-    // Get total count for pagination
-    $countStmt = $pdo->query("SELECT COUNT(*) as total FROM ws_sale_overview");
+    // Build WHERE clause for month filtering
+    $whereClause = "";
+    $params = [];
+    if ($month && $month >= 1 && $month <= 12) {
+        // Use date range instead of MONTH() function for better index usage
+        $year = date('Y');
+        $startDate = "$year-" . str_pad((string)$month, 2, '0', STR_PAD_LEFT) . "-01";
+        $endDate = date('Y-m-t', strtotime($startDate)); // Last day of month
+
+        $whereClause = "WHERE purchased_date >= :start_date AND purchased_date <= :end_date";
+        $params[':start_date'] = $startDate;
+        $params[':end_date'] = $endDate;
+    }
+
+    // Get total count
+    $countSql = "SELECT COUNT(*) as total FROM ws_sale_overview " . $whereClause;
+    $countStmt = $pdo->prepare($countSql);
+    foreach ($params as $key => $value) {
+        $countStmt->bindValue($key, $value, PDO::PARAM_STR);
+    }
+    $countStmt->execute();
     $totalRecords = (int)$countStmt->fetch()['total'];
-    $totalPages = (int)ceil($totalRecords / $limit);
 
     // Get paginated data
-    $stmt = $pdo->prepare("
+    $sql = "
         SELECT
             sale_id,
             sale_product,
@@ -57,51 +76,48 @@ try {
             price,
             profit
         FROM ws_sale_overview
+        " . $whereClause . "
         ORDER BY purchased_date DESC, sale_id DESC
-        LIMIT :limit OFFSET :offset
-    ");
-    $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
-    $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
+    ";
+    $stmt = $pdo->prepare($sql);
+
+    // Bind parameters
+    foreach ($params as $key => $value) {
+        $stmt->bindValue($key, $value, PDO::PARAM_STR);
+    }
     $stmt->execute();
     $rows = $stmt->fetchAll();
 
-    // Normalize types (renew is INT now, not boolean)
+    // Optimized data processing - only process what's needed
     foreach ($rows as &$r) {
-        $r['sale_id']        = isset($r['sale_id']) ? (int)$r['sale_id'] : null;
-        $r['duration']       = isset($r['duration']) ? (int)$r['duration'] : null;
-        $r['quantity']       = isset($r['quantity']) ? (int)$r['quantity'] : 1;
-        $r['renew']          = isset($r['renew']) ? (int)$r['renew'] : 0; // <-- INT (0,1,2,3,4,5,6,12)
+        // Only cast to int/float if needed for calculations
+        $r['sale_id'] = (int) ($r['sale_id'] ?? 0);
+        $r['duration'] = (int) ($r['duration'] ?? 0);
+        $r['quantity'] = (int) ($r['quantity'] ?? 1);
+        $r['renew'] = (int) ($r['renew'] ?? 0);
+        $r['price'] = (float) ($r['price'] ?? 0.0);
+        $r['profit'] = (float) ($r['profit'] ?? 0.0);
 
-        $r['price']          = isset($r['price']) ? (float)$r['price'] : 0.0;
-        $r['profit']         = isset($r['profit']) ? (float)$r['profit'] : 0.0;
-
-        // Nullable strings/dates
-        $r['sale_product']   = $r['sale_product'] ?? null;
-        $r['customer']       = $r['customer'] ?? null;
-        $r['email']          = $r['email'] ?? null;
-        $r['purchased_date'] = $r['purchased_date'] ?? null; // 'YYYY-MM-DD'
-        $r['expired_date']   = $r['expired_date'] ?? null;   // 'YYYY-MM-DD' or null
-        $r['manager']        = $r['manager'] ?? null;
-        $r['note']           = $r['note'] ?? null;
+        // Keep other fields as strings (faster than null coalescing)
+        $r['sale_product'] = $r['sale_product'] ?? '';
+        $r['customer'] = $r['customer'] ?? '';
+        $r['email'] = $r['email'] ?? '';
+        $r['purchased_date'] = $r['purchased_date'] ?? '';
+        $r['expired_date'] = $r['expired_date'] ?? '';
+        $r['manager'] = $r['manager'] ?? '';
+        $r['note'] = $r['note'] ?? '';
     }
     unset($r);
 
-    echo json_encode(
-        [
-            'success' => true,
-            'data' => $rows,
-            'pagination' => [
-                'current_page' => $page,
-                'total_pages' => $totalPages,
-                'total_records' => $totalRecords,
-                'per_page' => $limit,
-                'has_more' => $page < $totalPages,
-                'next_page' => $page < $totalPages ? $page + 1 : null,
-                'prev_page' => $page > 1 ? $page - 1 : null
-            ]
-        ],
-        JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRESERVE_ZERO_FRACTION
-    );
+    // Optimize JSON output
+    $response = [
+        'success' => true,
+        'data' => $rows,
+        'total_records' => $totalRecords,
+    ];
+
+    // Use faster JSON encoding without unnecessary flags
+    echo json_encode($response, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 } catch (Throwable $e) {
     http_response_code(500);
     echo json_encode(

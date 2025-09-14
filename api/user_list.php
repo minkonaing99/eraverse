@@ -1,10 +1,10 @@
 <?php
-// api/user_list.php
+
 declare(strict_types=1);
 
 header('Content-Type: application/json; charset=utf-8');
 header('Access-Control-Allow-Origin: *');
-header('Access-Control-Allow-Methods: POST'); // POST only
+header('Access-Control-Allow-Methods: POST');
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);
@@ -23,7 +23,6 @@ header('X-Content-Type-Options: nosniff');
 require __DIR__ . '/dbinfo.php';
 
 try {
-    // Fetch web users
     $webStmt = $pdo->prepare(
         "SELECT user_id, username, is_active, role, last_login_at, created_at
          FROM users where role != 'Owner'
@@ -32,7 +31,6 @@ try {
     $webStmt->execute();
     $webUsers = $webStmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
 
-    // Fetch bot users
     $botStmt = $pdo->prepare(
         "SELECT id, telegram_id, username, is_active, last_login, created_at
          FROM bot_users
@@ -41,12 +39,11 @@ try {
     $botStmt->execute();
     $botUsers = $botStmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
 
-    // Format web users
     $formattedWebUsers = array_map(function ($row) {
         return [
             'id' => $row['user_id'],
             'username' => $row['username'],
-            'telegram_id' => '-', // Web users don't have telegram ID
+            'telegram_id' => '-',
             'is_active' => (bool)$row['is_active'],
             'role' => $row['role'],
             'last_login' => $row['last_login_at'] ? date('Y-m-d H:i:s', strtotime($row['last_login_at'])) : 'Never',
@@ -55,24 +52,21 @@ try {
         ];
     }, $webUsers);
 
-    // Format bot users
     $formattedBotUsers = array_map(function ($row) {
         return [
             'id' => $row['id'],
             'username' => $row['username'],
             'telegram_id' => $row['telegram_id'],
             'is_active' => (bool)$row['is_active'],
-            'role' => 'Bot User', // Bot users have a fixed role
+            'role' => 'Bot User',
             'last_login' => $row['last_login'] ? date('Y-m-d H:i:s', strtotime($row['last_login'])) : 'Never',
             'created_at' => date('Y-m-d H:i:s', strtotime($row['created_at'])),
             'type' => 'bot'
         ];
     }, $botUsers);
 
-    // Combine both arrays
     $allUsers = array_merge($formattedWebUsers, $formattedBotUsers);
 
-    // Sort by username
     usort($allUsers, function ($a, $b) {
         return strcasecmp($a['username'], $b['username']);
     });

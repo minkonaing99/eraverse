@@ -1,10 +1,10 @@
 <?php
-// api/products_table.php
+
 declare(strict_types=1);
 
 header('Content-Type: application/json; charset=utf-8');
 header('Access-Control-Allow-Origin: *');
-header('Access-Control-Allow-Methods: POST'); // POST only
+header('Access-Control-Allow-Methods: POST');
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);
@@ -23,7 +23,6 @@ header('X-Content-Type-Options: nosniff');
 require __DIR__ . '/dbinfo.php';
 
 try {
-    // Pull raw int plus a computed boolean for a painless shim
     $stmt = $pdo->query("
         SELECT 
             product_id,
@@ -42,27 +41,20 @@ try {
     $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     foreach ($rows as &$r) {
-        // Integers
         $r['product_id'] = isset($r['product_id']) ? (int)$r['product_id'] : null;
         $r['duration']   = isset($r['duration']) ? (int)$r['duration'] : null;
 
-        // Keep raw int for new code…
         $r['renew_int']  = isset($r['renew_int']) ? (int)$r['renew_int'] : 0;
 
-        // …and expose legacy boolean for existing UI
-        // (cast via int; strings like "0"/"1" are common from PDO)
         $r['renew']      = isset($r['renew_bool']) ? ((int)$r['renew_bool'] === 1) : false;
 
-        // Money as numbers
         $r['wholesale']  = isset($r['wholesale']) ? (float)$r['wholesale'] : 0.0;
         $r['retail']     = isset($r['retail']) ? (float)$r['retail'] : 0.0;
 
-        // Nullable strings
         $r['supplier']   = $r['supplier'] ?? null;
         $r['note']       = $r['note'] ?? null;
         $r['link']       = $r['link'] ?? null;
 
-        // Drop the helper column from output
         unset($r['renew_bool']);
     }
     unset($r);

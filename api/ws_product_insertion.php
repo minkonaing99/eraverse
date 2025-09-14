@@ -1,8 +1,7 @@
 <?php
-// api/ws_product_insertion.php
 header('Content-Type: application/json; charset=utf-8');
 header('Access-Control-Allow-Origin: *');
-header('Access-Control-Allow-Methods: POST'); // POST only
+header('Access-Control-Allow-Methods: POST');
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);
@@ -34,7 +33,7 @@ try {
     // Helpers
     $MAX_VARCHAR = 255;
     $MAX_URL_LEN = 2083;
-    $ALLOWED_RENEW = [0, 1, 2, 3, 4, 5, 12];
+    $ALLOWED_RENEW = [0, 1, 2, 3, 4, 5, 6, 12];
 
     $trimOrNull = function ($v) {
         if ($v === null) return null;

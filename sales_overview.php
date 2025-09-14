@@ -1,13 +1,13 @@
 <?php
 
-declare(strict_types=1);
-require __DIR__ . '/api/session_bootstrap.php';
-require __DIR__ . '/api/auth.php';
+    declare (strict_types = 1);
+    require __DIR__ . '/api/session_bootstrap.php';
+    require __DIR__ . '/api/auth.php';
 
-auth_require_login(['admin', 'staff', 'owner']);
+    auth_require_login(['admin', 'staff', 'owner']);
 
-$role = ucfirst($_SESSION['user']['role'] ?? '');
-$user = htmlspecialchars($_SESSION['user']['username'] ?? 'Guest', ENT_QUOTES);
+    $role = ucfirst($_SESSION['user']['role'] ?? '');
+    $user = htmlspecialchars($_SESSION['user']['username'] ?? 'Guest', ENT_QUOTES);
 ?>
 
 <!DOCTYPE html>
@@ -72,6 +72,11 @@ $user = htmlspecialchars($_SESSION['user']['username'] ?? 'Guest', ENT_QUOTES);
                         <button class="icon-btn" id="downloadCsv"><img src="./assets/download.svg" alt="Download"></button>
                         <button class="icon-btn" id="uploadCsv"><img src="./assets/upload.svg" alt="Upload"></button>
                     <?php endif; ?>
+
+                    <select name="Month" id="selectMonth">
+                        <option value="">All Months</option>
+                    </select>
+
 
                     <button class="icon-btn" id="searchBtn" type="button">
                         <img src="./assets/search.svg" alt="Search">
@@ -257,7 +262,6 @@ $user = htmlspecialchars($_SESSION['user']['username'] ?? 'Guest', ENT_QUOTES);
                         <tr>
                             <th class="era-num">#</th>
                             <th>Product</th>
-                            <th class="era-dur column-hide">Dur</th>
                             <th class="era-dur">Qty</th>
                             <th class="era-renew column-hide" style="text-align: center;">Renew</th>
                             <th>Customer</th>

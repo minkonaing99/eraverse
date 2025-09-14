@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-require_once __DIR__ . '/session_bootstrap.php'; // has session_start + secure ini
+require_once __DIR__ . '/session_bootstrap.php';
 require_once __DIR__ . '/auth.php';
 require_once __DIR__ . '/remember.php';
 require_once __DIR__ . '/dbinfo.php';
@@ -17,7 +17,6 @@ if ($username === '' || $password === '') {
 }
 
 try {
-    // users(user_id, username, pass_hash, role, is_active, last_login_at)
     $stmt = $pdo->prepare("
         SELECT user_id, username, pass_hash, role, is_active
         FROM users
@@ -42,17 +41,7 @@ try {
     $_SESSION['username']  = $_SESSION['user']['username'];
     $_SESSION['privilege'] = $_SESSION['user']['role'];
 
-    // ✂️ Removed: logincode + the three client cookies (they’re tamperable)
-    // If you absolutely must keep a display cookie, at least set safe flags:
-    // setcookie('username', $_SESSION['username'], [
-    //     'expires'  => time() + 604800,
-    //     'path'     => '/',
-    //     'secure'   => !empty($_SERVER['HTTPS']),
-    //     'httponly' => true,
-    //     'samesite' => 'Lax',
-    // ]);
 
-    // Touch last_login_at
     $upd = $pdo->prepare("UPDATE users SET last_login_at = NOW() WHERE user_id = :id");
     $upd->execute([':id' => (int)$row['user_id']]);
 

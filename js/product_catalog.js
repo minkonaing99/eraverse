@@ -340,6 +340,7 @@
       const json = await r.json().catch(() => ({}));
       if (!r.ok || !json.success)
         throw new Error(json.error || `HTTP ${r.status}`);
+
       renderRows(json.data || [], tbody);
     } catch (err) {
       console.error("Failed to load products:", err);
